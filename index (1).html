@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2026 안전점검 보고서 검색 | 행정안전부 안전관리과</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">안전</span>
+        <div class="brand-text">
+          <p class="eyebrow">행정안전부 안전관리과 · 내부 열람용</p>
+          <h1>2026 안전점검 보고서 검색</h1>
+        </div>
+      </div>
+      <div class="search-row">
+        <label class="sr-only" for="q">보고서 검색</label>
+        <input id="q" type="text" placeholder="장 제목 또는 본문 키워드로 검색 (예: 예산, 시정완료율)" autocomplete="off">
+        <span id="count" class="count" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </header>
+
+  <main id="list" aria-live="polite"></main>
+
+  <p id="empty" class="empty" hidden>검색 결과가 없습니다. 다른 키워드로 다시 시도해 주세요.</p>
+
+  <footer>
+    <p>2026 행정안전부 안전점검 결과 보고서(가상) · 원문 5개 장 전체 · 부서 내부 열람용</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
