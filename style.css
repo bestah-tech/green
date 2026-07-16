@@ -1,0 +1,7 @@
+body{font-family:system-ui;margin:0;padding:1rem;max-width:880px;margin:auto}
+header{position:sticky;top:0;background:#fff;padding:1rem 0;border-bottom:1px solid #ddd}
+input{padding:.5rem;font-size:1rem;width:60%}
+.card{border:1px solid #eee;padding:1rem;margin:.5rem 0;border-radius:8px}
+.label{color:#06f;font-weight:600}
+.title{font-weight:600;margin:.25rem 0}
+.body{white-space:pre-wrap;color:#444;font-size:.9rem}
