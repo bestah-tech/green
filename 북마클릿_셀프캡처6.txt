@@ -1,0 +1,44 @@
+====================================================================
+셀프캡처 6판 (2,408자) ★셀프캡처 즐겨찾기 URL을 이것으로 교체★
+  = 신형·구형·국제 전부 / 팝업에서 누르기만 하면 클립보드에 누적
+====================================================================
+
+■ 무엇이 좋아졌나 (5판 대비)
+- 5판: 팝업에서 셀프캡처 → 메인창 [CLIP] → [OUT] (2~3단계)
+- 6판: 팝업에서 셀프캡처만 누르면 클립보드에 "누적"됨
+        → 메인창/패널 안 거쳐도 됨. 여러 건도 계속 누르면 쌓임
+- 마지막에 뷰어에 딱 한 번 붙여넣기(Ctrl+V) → 전부 건별 정리
+
+■ 신형/구형 모두 자동 (형식 신경 쓸 필요 없음)
+- 신형: 화면 DOM(라디오/입력칸/표)을 그대로 수집
+- 구형·국제: 편집기 박스 4개(검색결과/심사내용/의견요약/판단의견)를
+  특허넷 정식 API(GetFieldTextData)로 직접 추출
+- 한 번의 셀프캡처가 위 둘을 다 시도하므로 어느 형식이든 그냥 누르면 됨
+
+■ 사용법 (아주 단순해짐)
+1. 점검표 팝업 창 바깥 영역 클릭 → Ctrl+I → [셀프캡처]
+2. 알림 '수집 N건 (H숫자)'
+   - N = 지금까지 누적된 건수 (누를 때마다 1씩 증가)
+   - H = 이번 건에서 뽑은 편집기 박스 수 (구형이면 보통 3~4,
+         신형이면 H0 = 정상, DOM에서 이미 수집됨)
+3. 다음 선행건 팝업에서도 똑같이 [셀프캡처] → N이 2, 3... 증가
+4. 다 모았으면 뷰어 열고 입력칸에 Ctrl+V → [붙여넣은 내용 정리하기]
+   ※ 뷰어의 '기존 목록에 누적' 체크는 있어도 되고 없어도 됨
+     (클립보드 자체에 이미 여러 건이 [구분선]으로 담겨 있음)
+
+■ 새로 시작하려면 (누적 초기화)
+- 다른 텍스트를 아무거나 한 번 복사(Ctrl+C)하면 누적이 끊김
+  → 다음 셀프캡처는 '수집 1건'부터 다시 시작
+- 즉 "한 출원 검토 = 뷰어에 한 번 붙여넣기" 후, 아무 데나 클릭해
+  글자 복사 한 번 하면 다음 출원분과 안 섞임
+
+■ IN 방식도 그대로 살아 있음
+- 메인 북마클릿 v6.7의 [IN]은 신형 국내건에 여전히 사용 가능
+  (신형은 IN·셀프캡처 둘 다 됨. 편한 쪽으로)
+- 구형·국제는 셀프캡처가 정답
+
+--------------------------------------------------------------------
+[코드] (2,408자)
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape,O=[],F=0,H=0,FN=['SRCH_RSLT','EXMN_CONT','RMKS_SMRY_TL','EXMNR_DCSN_CMNT_TL'],FT=[U('[%u0020%uAC80%uC0C9%uACB0%uACFC%u0020]'),U('[%u0020%uC2EC%uC0AC%uB0B4%uC6A9%u0020]'),U('[%u0020%uC758%uACAC%uC694%uC57D%u0020]'),U('[%u0020%uD310%uB2E8%uC758%uACAC%u0020]')],FV=['','','',''];function dp(d){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='IFRAME'||t=='FRAME'||t=='IMG'||t=='OBJECT'||t=='EMBED')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(d.body)}catch(e){}return o.join('')}function hw(d){var i,j,v,L=[];try{var a=d.getElementsByTagName('OBJECT');for(i=0;i<a.length;i++)L.push(a[i])}catch(x){}try{var b=d.getElementsByTagName('EMBED');for(i=0;i<b.length;i++)L.push(b[i])}catch(x){}for(i=0;i<L.length;i++)for(j=0;j<4;j++){if(FV[j])continue;try{v=L[i].GetFieldTextData(FN[j]);if(v&&/\S/.test(''+v))FV[j]=''+v}catch(x){}}}function Q(w){var d;try{d=w.document}catch(e){return}F++;O.push('\n=====\n');try{O.push(dp(d))}catch(e){}try{hw(d)}catch(e){}try{for(var i=0;i<w.frames.length;i++)Q(w.frames[i])}catch(e){}}Q(window);var t=O.join(''),j;for(j=0;j<4;j++)if(FV[j]){H++;t+=U('\n[%uD074%uB9BD]\n')+FT[j]+'\n'+FV[j]+'\n'}t=t.replace(/\n\n\n+/g,'\n\n');if(t.replace(/[\s=]/g,'').length<100){alert('EMPTY');return}var MK=U('[%uD31D%uC5C5%uCEA1%uCC98]'),cap=MK+'\n'+t,pre='';try{pre=window.clipboardData.getData('Text')||''}catch(e){}var acc=(pre.indexOf(MK)==0)?(pre+'\n'+cap):cap;var N=acc.split(MK).length-1;try{window.clipboardData.setData('Text',acc);alert(U('%uC218%uC9D1 ')+N+U('%uAC74 (H')+H+')')}catch(e){alert('X')}})();
