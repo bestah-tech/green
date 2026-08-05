@@ -127,3 +127,13 @@ console.log('지정상품:', (ic.goods||[]).length + '건 / 선등록:', (ic.pri
 console.log('CLIP 조각:', (ic.segs||[]).length + '개 →',
   (ic.segs||[]).map(function(s,i){ return '조각'+(i+1)+'('+s.substring(0,12).replace(/\n/g,'')+')'; }).join(', '));
 console.log('최종판단:', ic.finalCall || '(미기재)');
+
+console.log('==== 셀프캡처2: 프레임 직접 순회 덤프 ([클립] 없음) ====');
+var fdump = '[팝업캡처]\n심사점검표\n | 검색범위 |  [●]전체 [○]등록\n | 질의어 |  [입력: german+germen]\n | 유사질의어 |  [입력: GermanProt+저만프롯]  [●]단순\n | 류 | 유사군코드 | 지정상품 | 유사1 |\n | 01 | G1001 | casein concentrate |  |\n=====\n파일(F) 편집(E) 보기(U)\n=====\n검색결과\n타인\n본인\n=====\n[ 검색결과 ]\n[MAPS 기본사항]\n- 일반표장, 사후지정건. 출원일(소급일) : 13.08.23\n■ 표장분석 : GermanProt\n- German : (형) 독일의\n(1) 400123456 GERMANO G1001 G0704 홍O동\n[ 심사내용 ]\n○ 출원공고\n[ 의견요약 ]\n[ 판단의견 ]\n○ 등록결정\n=====\n출력 일괄출력 닫기\n';
+var fc2 = sandbox.splitDump(fdump);
+var f2 = sandbox.parseCase(fc2[fc2.length-1]);
+console.log('형식:', f2.oldFormat ? '구형 ✓' : '신형 (오류!)', '/ 표장명:', f2.markName,
+  '/ 지정상품:', (f2.goods||[]).length + '건 / 선등록:', (f2.priorReg||[]).length + '건');
+console.log('조각:', (f2.segs||[]).length + '개 →',
+  (f2.segs||[]).map(function(s){ return s.substring(0,14).replace(/\n/g,'·'); }).join(' / '));
+console.log('최종판단:', f2.finalCall || '(미기재)');

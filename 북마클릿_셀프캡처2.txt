@@ -1,0 +1,24 @@
+====================================================================
+셀프캡처 2판 — 프레임 직접 순회 (1,871자) ★기존 셀프캡처 교체★
+====================================================================
+
+■ 배경 (진단 결과)
+- 점검표 창의 한글 문서는 ActiveX가 아니라 HTML 프레임(W/2, 6,257자)에
+  렌더링되어 있고 코드로 읽을 수 있음을 확인
+- 다만 일반 DOM 순회로는 그 프레임에 진입이 안 되는 구조
+  → 프레임 목록(window.frames)을 직접 재귀 순회하도록 수정
+
+■ 1판과 다른 점
+- 창 본문 + 모든 프레임을 직접 순회해 통째로 수집 (중복 방문 방지)
+- 성공 알림이 'COPY2 글자수'로 바뀜 (2판 설치 확인용)
+
+■ 사용 (동일)
+1. 심사점검표 팝업 창 안에서 Ctrl+I → [셀프캡처] 클릭
+2. 'COPY2 숫자' 알림 — 숫자가 수천 단위면 문서 본문까지 담긴 것
+3. 메인 창 [CLIP] → 건수 +1 → [OUT] → 뷰어
+
+--------------------------------------------------------------------
+[코드] (1,871자)
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape;function dp(w){var o=[],V=[];function vis(d){for(var z=0;z<V.length;z++)if(V[z]==d)return 1;V.push(d);return 0}function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='OBJECT'||t=='EMBED'){var v='';try{v=e.GetTextFile('TEXT','')}catch(x){}if(!v)try{v=e.GetText()}catch(x){}try{if(v&&(''+v).length>20)o.push(U('\n[%uD074%uB9BD]\n')+v+'\n')}catch(x){}return}if(t=='IMG')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');if(t=='IFRAME'||t=='FRAME'){try{var dd=e.contentWindow.document;if(!vis(dd)){o.push('\n=====\n');k(dd.body)}}catch(x){}return}for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{if(!vis(w.document))k(w.document.body)}catch(e){}(function fr(x){var i;try{for(i=0;i<x.frames.length;i++){try{var d2=x.frames[i].document;if(!vis(d2)){o.push('\n=====\n');k(d2.body)}}catch(x2){}fr(x.frames[i])}}catch(x3){}})(w);return o.join('').replace(/\n\n\n+/g,'\n\n')}var t=dp(window)||'';if(!t||t.length<300){alert('EMPTY');return}try{window.clipboardData.setData('Text',U('[%uD31D%uC5C5%uCEA1%uCC98]')+'\n'+t);alert('COPY2 '+t.length)}catch(e){alert('X')}})();

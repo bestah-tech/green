@@ -406,9 +406,9 @@ function parseCaseOld(chunk){
      한 조각 안에 【검색결과】【심사내용】【의견요약】【판단의견】 표제가
      여러 개 들어있으면(문서 통복사) 표제 단위로 다시 나눈다. */
   c.segs = [];
-  var parts = t.split(/\n?\[클립\]\n?/);
-  for(var si=1; si<parts.length; si++){
-    var subs = parts[si].split(/(?=【[^】\n]{1,20}】|\[\s*(?:검색결과|심사내용|의견요약|판단의견)\s*\])/);
+  var TITLE_RE = /(?=【[^】\n]{1,20}】|\[\s*(?:검색결과|심사내용|의견요약|판단의견)\s*\])/;
+  function pushSegs(block){
+    var subs = block.split(TITLE_RE);
     for(var sj=0; sj<subs.length; sj++){
       var sv = cleanRaw(subs[sj]);
       var gauge = sv.replace(/【[^】]*】/g,'')
@@ -416,6 +416,15 @@ function parseCaseOld(chunk){
                     .replace(/\s/g,'');
       if(gauge.length > 2) c.segs.push(sv);
     }
+  }
+  var parts = t.split(/\n?\[클립\]\n?/);
+  for(var si=1; si<parts.length; si++) pushSegs(parts[si]);
+  if(!c.segs.length){
+    /* [클립] 조각이 없어도(셀프캡처가 프레임을 직접 담은 경우)
+       본문에서 표제 구간을 찾아 조각으로 승격. 표제 이전(껍데기)은 제외,
+       각 구간은 다음 프레임 경계(=====)에서 자름 */
+    var tm = t.split(TITLE_RE);
+    for(var ti=1; ti<tm.length; ti++) pushSegs(tm[ti].split(/\n?=====\n?/)[0]);
   }
 
   /* 요약 판정: 조각들에서 식별력·최종판단만 읽음 */
