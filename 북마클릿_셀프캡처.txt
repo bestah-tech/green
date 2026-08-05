@@ -1,0 +1,25 @@
+====================================================================
+셀프캡처 — 점검표 창 안에서 직접 실행하는 보조 북마클릿 (1,571자)
+====================================================================
+
+■ 용도
+- 어떤 방식으로 열린 창이든(2차 팝업, 모달 등) 그 창 "자신"의 화면을
+  덤프해서 [팝업캡처] 표식과 함께 클립보드에 담음
+- 메인 패널의 [CLIP]을 누르면 새 건으로 들어감 (v6.5 필수)
+- 창 추적이 안 되는 국제등록상표 심사점검표용 우회로
+
+■ 설치
+- "새" 즐겨찾기를 하나 만들어(이름: 셀프캡처) URL에 아래 코드
+- 메인 북마클릿(v6.5)과 별개로 공존
+
+■ 사용
+1. 심사점검표 창 안에서 Ctrl+I → [셀프캡처] 클릭
+2. 'COPY 숫자' 알림 = 성공 (EMPTY면 창 내용이 너무 적은 것)
+3. 메인 창으로 가서 [CLIP] → 건수 +1 확인
+4. 이후 기존과 동일: [OUT] → 뷰어 붙여넣기
+
+--------------------------------------------------------------------
+[코드] (1,571자)
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape;function dp(w){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='OBJECT'||t=='EMBED'){var v='';try{v=e.GetTextFile('TEXT','')}catch(x){}if(!v)try{v=e.GetText()}catch(x){}try{if(v&&(''+v).length>20)o.push(U('\n[%uD074%uB9BD]\n')+v+'\n')}catch(x){}return}if(t=='IMG')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');if(t=='IFRAME'||t=='FRAME'){try{o.push('\n=====\n');k(e.contentWindow.document.body)}catch(x){}return}for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(w.document.body)}catch(e){return null}return o.join('').replace(/\n\n\n+/g,'\n\n')}var t=dp(window)||'';if(!t||t.length<300){alert('EMPTY');return}try{window.clipboardData.setData('Text',U('[%uD31D%uC5C5%uCEA1%uCC98]')+'\n'+t);alert('COPY '+t.length)}catch(e){alert('X')}})();

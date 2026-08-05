@@ -190,11 +190,16 @@ function cleanRaw(s){
 }
 var CUR_BLKS = [];   /* 현재 건의 심사관 기재(입력내용) 원문 보관소 */
 
-/* 출원번호: "출원번호 : 40-...", "출원번호 | 40-..." 등 콜론/파이프 변형 모두 인식 */
-var APPRE = /출원번호[^\S\n]*[|:：]?[^\S\n]*(\d{2}-\d{4}-\d{7})/;
+/* 출원번호: "출원번호 : 40-...", "출원번호 | 40-..." 등 콜론/파이프 변형 모두 인식.
+   국제등록건 등에서 하이픈 없이 13자리(4020140063931)로 나오는 표기도 인식해
+   40-2014-0063931 형태로 정규화 */
+var APPRE = /출원번호[^\S\n]*[|:：]?[^\S\n]*(\d{2}-\d{4}-\d{7}|\d{13})/;
 function findAppNo(s){
   var m = APPRE.exec(s);
-  return m ? m[1] : '';
+  if(!m) return '';
+  var v = m[1];
+  if(v.indexOf('-') < 0) v = v.substring(0,2) + '-' + v.substring(2,6) + '-' + v.substring(6);
+  return v;
 }
 
 function grabBlock(text, startIdx){
@@ -886,12 +891,13 @@ function splitDump(t){
      ② 구버전 덤프: 출원번호 표기 위치에서 분리하되,
         - 출원번호가 없는 앞부분(좌측 프레임의 지정상품 표 등)은 다음 조각에 합침
         - 같은 출원번호가 프레임마다 반복 등장해 쪼개진 조각은 도로 합침 */
+  t = t.replace(/\[팝업캡처\]/g, '[구분선]');   // 셀프캡처 표식도 건 구분으로 취급
   if(t.indexOf('[구분선]') >= 0){
     var parts = t.split(/\n?\[구분선\]\n?/), outs = [], i;
     for(i=0;i<parts.length;i++) if(/\S/.test(parts[i])) outs.push(parts[i]);
     return outs;
   }
-  var raw = t.split(/(?=출원번호[^\S\n]*[|:：]?[^\S\n]*\d{2}-\d{4}-\d{7})/);
+  var raw = t.split(/(?=출원번호[^\S\n]*[|:：]?[^\S\n]*(?:\d{2}-\d{4}-\d{7}|\d{13}))/);
   var chunks = [], j;
   for(j=0;j<raw.length;j++){
     if(!raw[j]) continue;

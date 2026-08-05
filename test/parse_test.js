@@ -109,3 +109,11 @@ console.log('본인선행:', (c04.ownPrior||[]).length + '건 / 타인선등록:
 console.log('CLIP 조각:', (c04.segs||[]).length + '개 →',
   (c04.segs||[]).map(function(s){ var m=s.match(/^\s*【([^】]+)】/); return m?m[1]:'(무제)'; }).join(', '));
 console.log('최종판단:', c04.finalCall || '(미기재)');
+
+console.log('==== 국제건: 하이픈 없는 출원번호 + [팝업캡처] 표식 ====');
+console.log('정규화:', sandbox.findAppNo('출원번호 | 4020140063931 | 출원일자'));
+var mix = '[팝업캡처]\n출원번호 | 4020140063931 |\n표장분석\n | - 사전적 또는 실제적 관념 분석 |\n[입력내용]\n테스트 관념\n\n | [●]식별력 있음 [○]식별력 없음\n';
+var ch3 = sandbox.splitDump(d21 + '\n\n[구분선]\n\n' + mix);
+console.log('조각 수:', ch3.length, '→', ch3.map(function(c){ return sandbox.findAppNo(c) || '(미상)'; }).join(', '));
+var ci = sandbox.parseCase(ch3[ch3.length-1]);
+console.log('국제건 카드:', ci.appNo, '/ 식별력:', ci.distinct, '/ 표장분석:', ci.markAnalysis);

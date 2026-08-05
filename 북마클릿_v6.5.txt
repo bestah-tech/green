@@ -1,0 +1,27 @@
+====================================================================
+v6.5 — 메인 북마클릿 (기존 즐겨찾기 URL 교체, 3,383자)
+====================================================================
+
+■ 바뀐 것 (v6.4 대비)
+1. 팝업 감시 표식을 창이 아닌 "문서"에 저장
+   → IE가 팝업 안에서 페이지를 이동해도 감시가 다시 걸림
+   → 국제건 2차 팝업(심사점검표)이 [IN]으로 잡힐 가능성 높아짐
+2. [CLIP]이 [팝업캡처] 표식으로 시작하는 클립보드 내용을 만나면
+   직전 건에 붙이지 않고 "새 건"으로 담음 (건수 +1)
+   → 아래 "셀프캡처" 북마클릿과 한 세트
+
+■ 국제등록상표 사용 순서 (권장)
+1. 심사이력정보 → 심사점검표까지 열기
+2. 우선 [IN] 시도 (1~2초 기다렸다가) → 뷰어에서 점검표가 제대로
+   나오면 그걸로 끝
+3. [IN]이 여전히 심사이력정보를 담아오면:
+   심사점검표 "창 안에서" Ctrl+I → [셀프캡처] 클릭 ('COPY 숫자' 알림)
+   → 메인 창에서 [CLIP] (숫자 +1 확인) → 이후 동일 (OUT → 뷰어)
+
+■ 실행 시 'READY v6.5' 알림 확인. 맨 끝 })(); 잘림 확인.
+
+--------------------------------------------------------------------
+[코드] (3,383자)
+--------------------------------------------------------------------
+
+javascript:(function(){var W=window,U=unescape,D,B=[],S={},P=[];if(W.__a){alert('ON');return}W.__a=1;function hk(w){try{var m=w.document;if(!m.__h){var o=w.open;w.open=function(a,b,c,d){var p=null;try{p=o(a,b,c,d)}catch(e){try{p=o.call(w,a,b,c,d)}catch(e2){try{p=o.apply(w,arguments)}catch(e3){}}}try{if(p)P.push(p)}catch(e){}try{if(p)hk(p)}catch(e){}return p};m.__h=1}for(var i=0;i<w.frames.length;i++)hk(w.frames[i])}catch(e){}}hk(W);function fb(w){try{if(w.document.body.offsetWidth>200)return w}catch(e){}try{for(var i=0;i<w.frames.length;i++){var r=fb(w.frames[i]);if(r)return r}}catch(e){}}function dp(w){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='OBJECT'||t=='EMBED'){var v='';try{v=e.GetTextFile('TEXT','')}catch(x){}if(!v)try{v=e.GetText()}catch(x){}try{if(v&&(''+v).length>20)o.push(U('\n[%uD074%uB9BD]\n')+v+'\n')}catch(x){}return}if(t=='IMG')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');if(t=='IFRAME'||t=='FRAME'){try{o.push('\n=====\n');k(e.contentWindow.document.body)}catch(x){}return}for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(w.document.body)}catch(e){return null}return o.join('').replace(/\n\n\n+/g,'\n\n')}function A(t){var q=t.length+t.slice(0,99);if(S[q]){alert('DUP');return}S[q]=1;B.push(t);G('_n').innerHTML=B.length}var fw=fb(W);if(!fw){alert('NO BODY');return}D=fw.document;function G(i){return D.getElementById(i)}var v=D.createElement('div');v.style.cssText='position:fixed;right:6px;bottom:6px;z-index:99999;background:#17324D;color:#fff;padding:7px';v.innerHTML='<b id=_n>0</b> <button id=_g>IN</button> <button id=_k>CLIP</button> <button id=_x>OUT</button> <button id=_c>CLR</button>';D.body.appendChild(v);G('_g').onclick=function(){for(var i=P.length-1;i>=0;i--){try{var p=P[i];if(!p||p.closed)continue;var t=dp(p);if(t&&t.length>=300){A(t);return}}catch(e){}}alert('NO POPUP')};G('_k').onclick=function(){var t='';try{t=W.clipboardData.getData('Text')||''}catch(e){}if(!t||t.length<50){alert('CLIP EMPTY');return}if(t.indexOf(U('[%uD31D%uC5C5%uCEA1%uCC98]'))==0){A(t);return}var q='c'+t.length+t.slice(0,99);if(S[q]){alert('DUP');return}S[q]=1;if(B.length){B[B.length-1]+=U('\n[%uD074%uB9BD]\n')+t;alert('+CLIP')}else{B.push(t);G('_n').innerHTML=B.length}};G('_x').onclick=function(){if(!B.length){alert(0);return}try{W.clipboardData.setData('Text',B.join('\n\n'+U('[%uAD6C%uBD84%uC120]')+'\n\n'));alert(B.length)}catch(e){alert('X')}};G('_c').onclick=function(){B.length=0;S={};G('_n').innerHTML=0};setInterval(function(){hk(W);for(var z=0;z<P.length;z++){try{var y=P[z];if(y&&!y.closed)hk(y)}catch(e){}}},1500);alert('READY v6.5')})();
