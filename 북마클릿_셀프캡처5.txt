@@ -1,0 +1,31 @@
+====================================================================
+셀프캡처 5판 (2,237자) ★셀프캡처 즐겨찾기 URL을 이것으로 교체★
+====================================================================
+
+■ 4판의 문제 (덤프 분석으로 확인)
+- 대체 수집(innerText)이 긁어온 6만 자짜리 "텍스트"는 문서가 아니라
+  페이지의 스크립트 소스코드였음 → 붙여넣으면 코드 덩어리만 보임
+
+■ 5판의 해법 — 특허넷 자체 코드에서 찾아낸 정식 추출 API 사용
+- 덤프에 담긴 특허넷 코드가 편집기를 다루는 방법이 그대로 있었음:
+  HwpRemoteCtrl.GetFieldTextData("필드명")
+- 문서의 박스 4개 = 필드 4개:
+  SRCH_RSLT(검색결과) / EXMN_CONT(심사내용) /
+  RMKS_SMRY_TL(의견요약) / EXMNR_DCSN_CMNT_TL(판단의견)
+- 5판은 껍데기를 정밀 수집(스크립트 제외)하고, 위 4개 필드를
+  API로 직접 뽑아 [클립] 조각으로 자동 첨부
+  → 박스 클릭/Ctrl+A/C 자체가 불필요
+
+■ 사용
+1. 심사점검표 팝업 창 바깥 영역 클릭 → Ctrl+I → 셀프캡처
+2. 알림 'COPY5 글자수 F프레임수 H필드수'
+   - H3~H4 = 성공! (내용 있는 박스 수만큼)
+   - H0 = 필드 추출 실패 (그대로 알려주세요)
+3. 메인 창 [CLIP] → +1 → [OUT] → 뷰어
+   → 카드에 검색결과/심사내용/판단의견 섹션이 자동 정리됨
+
+--------------------------------------------------------------------
+[코드] (2,237자)
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape,O=[],F=0,H=0,FN=['SRCH_RSLT','EXMN_CONT','RMKS_SMRY_TL','EXMNR_DCSN_CMNT_TL'],FT=[U('[%u0020%uAC80%uC0C9%uACB0%uACFC%u0020]'),U('[%u0020%uC2EC%uC0AC%uB0B4%uC6A9%u0020]'),U('[%u0020%uC758%uACAC%uC694%uC57D%u0020]'),U('[%u0020%uD310%uB2E8%uC758%uACAC%u0020]')],FV=['','','',''];function dp(d){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='IFRAME'||t=='FRAME'||t=='IMG'||t=='OBJECT'||t=='EMBED')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(d.body)}catch(e){}return o.join('')}function hw(d){var i,j,v,L=[];try{var a=d.getElementsByTagName('OBJECT');for(i=0;i<a.length;i++)L.push(a[i])}catch(x){}try{var b=d.getElementsByTagName('EMBED');for(i=0;i<b.length;i++)L.push(b[i])}catch(x){}for(i=0;i<L.length;i++)for(j=0;j<4;j++){if(FV[j])continue;try{v=L[i].GetFieldTextData(FN[j]);if(v&&/\S/.test(''+v))FV[j]=''+v}catch(x){}}}function Q(w){var d;try{d=w.document}catch(e){return}F++;O.push('\n=====\n');try{O.push(dp(d))}catch(e){}try{hw(d)}catch(e){}try{for(var i=0;i<w.frames.length;i++)Q(w.frames[i])}catch(e){}}Q(window);var t=O.join(''),j;for(j=0;j<4;j++)if(FV[j]){H++;t+=U('\n[%uD074%uB9BD]\n')+FT[j]+'\n'+FV[j]+'\n'}t=t.replace(/\n\n\n+/g,'\n\n');if(t.replace(/[\s=]/g,'').length<100){alert('EMPTY');return}try{window.clipboardData.setData('Text',U('[%uD31D%uC5C5%uCEA1%uCC98]')+'\n'+t);alert('COPY5 '+t.length+' F'+F+' H'+H)}catch(e){alert('X')}})();
