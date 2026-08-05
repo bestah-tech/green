@@ -1,0 +1,30 @@
+====================================================================
+진단용 북마클릿 — 구형 팝업 내부 구조 조사 (1,137자)
+====================================================================
+
+■ 용도
+- 구형 심사점검표 팝업 안에 어떤 개체(HWP ActiveX/iframe)가 있고,
+  어떤 텍스트 추출 API가 붙어 있는지, 프레임별로 텍스트를 몇 글자나
+  읽을 수 있는지 조사해서 결과를 클립보드에 복사해 줌.
+- 결과에는 개체 이름/메서드명/글자수 같은 구조 정보만 담김
+  (사건 내용·이름은 포함되지 않음 → 외부 전달 가능)
+
+■ 사용법
+1. 새 즐겨찾기를 하나 만들고 (아무 페이지나 즐겨찾기 추가 후
+   이름을 "점검표 진단"으로 변경) URL을 아래 [코드]로 교체
+2. 구형 심사점검표 "팝업 창 안에서" Ctrl+I → "점검표 진단" 클릭
+   (메인 창이 아니라 팝업 창에서 실행해야 함)
+3. 'DIAG OK 숫자' 알림이 뜨면 → 메모장 열고 Ctrl+V
+4. 붙은 내용을 그대로 전달
+
+■ 결과 읽는 법 (참고)
+- "W/0 len=3500" → 0번 프레임에서 일반 텍스트 3,500자 읽힘
+- "OBJECT#... GetTextFile; TF=2400" → 그 개체에서 API로 2,400자 추출 성공
+- "TFx GTx BTx" → 그 개체는 시도한 API가 모두 실패
+- "NOACCESS" → 그 프레임은 접근 차단
+
+--------------------------------------------------------------------
+[코드] (1,137자)
+--------------------------------------------------------------------
+
+javascript:(function(){var r=[];function P(e){var o='',M=['GetTextFile','GetText','GetBodyText','GetFieldText','GetPageText','SaveToString','GetDocumentText','Copy'],j,v;for(j=0;j<M.length;j++){try{if(e[M[j]]!=null)o+=M[j]+';'}catch(x){}}try{v=e.GetTextFile('TEXT','');o+=' TF='+(v?(''+v).length:0)}catch(x){o+=' TFx'}try{v=e.GetText();o+=' GT='+(v?(''+v).length:0)}catch(x){o+=' GTx'}try{v=e.GetBodyText();o+=' BT='+(v?(''+v).length:0)}catch(x){o+=' BTx'}return o}function Q(w,p){var d,i,e,k,T=['OBJECT','EMBED','APPLET'];try{d=w.document}catch(x){r.push(p+' NOACCESS');return}try{r.push(p+' len='+((d.body&&d.body.innerText)||'').length)}catch(x){r.push(p+' len?')}for(k=0;k<3;k++){try{e=d.getElementsByTagName(T[k]);for(i=0;i<e.length;i++)r.push(p+' '+T[k]+'#'+(e[i].id||e[i].name||i)+' cls='+((e[i].getAttribute&&(e[i].getAttribute('classid')||e[i].getAttribute('src')||''))||'').slice(0,40)+' '+P(e[i]))}catch(x){}}try{for(i=0;i<w.frames.length;i++)Q(w.frames[i],p+'/'+i)}catch(x){}}Q(window,'W');var s=r.join('\r\n');try{window.clipboardData.setData('Text',s);alert('DIAG OK '+r.length)}catch(x){prompt('COPY:',r.join(' | '))}})();
