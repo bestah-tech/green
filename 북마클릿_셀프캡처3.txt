@@ -1,0 +1,27 @@
+====================================================================
+셀프캡처 3판 (2,067자) ★셀프캡처 즐겨찾기 URL을 이것으로 교체★
+====================================================================
+
+■ 2판과 다른 점
+- 프레임마다: 정밀 수집(노드 순회)을 먼저 시도하고, 결과가
+  그 프레임의 실제 텍스트(innerText)보다 훨씬 적으면
+  → 진단 때 6,257자를 읽어낸 것과 동일한 innerText 방식으로 대체 수집
+- 알림이 'COPY3 글자수 F프레임수'로 바뀜
+  예) COPY3 7480 F4 = 7,480자, 프레임 4개 수집
+
+■ 사용 (동일)
+- 점검표 팝업의 "바깥 영역"을 한 번 클릭(포커스) → Ctrl+I →
+  셀프캡처 클릭. ※ 커서가 한글문서 안에 있으면 즐겨찾기가 안 열리는 게
+  정상입니다. 바깥에서 실행해도 코드는 안쪽 프레임까지 들어갑니다.
+- 알림 확인 후 메인 창 [CLIP] → +1 → [OUT] → 뷰어
+
+■ 알림 해석
+- 'COPY3 큰숫자(수천) F4' → 성공. 문서 본문까지 담김
+- 'COPY3 ~900 F0'       → 이 창에서 프레임이 안 보인다는 뜻
+                           (그 숫자 그대로 알려주세요. 다음 수를 정합니다)
+
+--------------------------------------------------------------------
+[코드] (2,067자)
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape,F=0;function dp(w){var o=[],V=[];function vis(d){for(var z=0;z<V.length;z++)if(V[z]==d)return 1;V.push(d);return 0}function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='OBJECT'||t=='EMBED'){var v='';try{v=e.GetTextFile('TEXT','')}catch(x){}if(!v)try{v=e.GetText()}catch(x){}try{if(v&&(''+v).length>20)o.push(U('\n[%uD074%uB9BD]\n')+v+'\n')}catch(x){}return}if(t=='IMG')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');if(t=='IFRAME'||t=='FRAME'){try{var dd=e.contentWindow.document;if(!vis(dd)){o.push('\n=====\n');k(dd.body)}}catch(x){}return}for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{if(!vis(w.document))k(w.document.body)}catch(e){}(function fr(x){var i;try{for(i=0;i<x.frames.length;i++){try{var d2=x.frames[i].document;if(!vis(d2)){F++;var m1=o.length;o.push('\n=====\n');try{k(d2.body)}catch(x4){}var g=o.slice(m1).join('').length-7;var it='';try{it=(d2.body&&d2.body.innerText)||''}catch(x5){}if(it.length>g*2&&it.length>200)o.push('\n'+it+'\n')}}catch(x2){}fr(x.frames[i])}}catch(x3){}})(w);return o.join('').replace(/\n\n\n+/g,'\n\n')}var t=dp(window)||'';if(!t||t.length<300){alert('EMPTY');return}try{window.clipboardData.setData('Text',U('[%uD31D%uC5C5%uCEA1%uCC98]')+'\n'+t);alert('COPY3 '+t.length+' F'+F)}catch(e){alert('X')}})();
