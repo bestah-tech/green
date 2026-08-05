@@ -397,12 +397,17 @@ function parseCaseOld(chunk){
     c.priorReg = parseOldRows(t);   // 소구분 없이 나열된 경우
   }
 
-  /* CLIP 조각 분해 */
+  /* CLIP 조각 분해.
+     한 조각 안에 【검색결과】【심사내용】【의견요약】【판단의견】 표제가
+     여러 개 들어있으면(문서 통복사) 표제 단위로 다시 나눈다. */
   c.segs = [];
   var parts = t.split(/\n?\[클립\]\n?/);
   for(var si=1; si<parts.length; si++){
-    var sv = cleanRaw(parts[si]);
-    if(sv.replace(/\s/g,'').length > 2) c.segs.push(sv);
+    var subs = parts[si].split(/(?=【[^】\n]{1,20}】)/);
+    for(var sj=0; sj<subs.length; sj++){
+      var sv = cleanRaw(subs[sj]);
+      if(sv.replace(/【[^】]*】/g,'').replace(/\s/g,'').length > 2) c.segs.push(sv);
+    }
   }
 
   /* 요약 판정: 조각들에서 식별력·최종판단만 읽음 */
@@ -771,7 +776,12 @@ function render(cases){
       for(var sgi=0; sgi<(c.segs||[]).length; sgi++){
         var sg = c.segs[sgi];
         var ttl = '기재 ' + (sgi+1);
-        if(/\(\d+\)\s*\d{9}/.test(sg)) ttl = '검색결과';
+        var hm = sg.match(/^\s*【\s*([^】\n]{1,20}?)\s*】/);
+        if(hm){
+          ttl = hm[1];
+          sg = sg.replace(/^\s*【[^】\n]*】[ \t]*\n?/,'');   // 표제 줄은 제목으로 승격
+        }
+        else if(/\(\d+\)\s*\d{9}/.test(sg)) ttl = '검색결과';
         else if(/제3[345]조|기본사항|심사검토|표장 관념/.test(sg)) ttl = '심사내용';
         else if(/의견요약/.test(sg)) ttl = '의견요약';
         else {
@@ -781,7 +791,7 @@ function render(cases){
           if(/취소환송/.test(sg)) fh++;
           if(fh === 1 && sg.length < 400) ttl = '판단의견';
         }
-        body += secHtml(ttl, '<pre class="raw' + (ttl==='판단의견'?' op':'') + '">' + esc(sg) + '</pre>', true);
+        body += secHtml(ttl, '<pre class="raw' + (/판단의견/.test(ttl)?' op':'') + '">' + esc(sg) + '</pre>', true);
       }
     } else {
 

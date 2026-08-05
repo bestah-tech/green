@@ -95,3 +95,17 @@ var oc = sandbox.parseCase(oldDump);
 console.log('형식:', oc.oldFormat ? '구형 ✓' : '신형 (오류!)', '/ 출원번호:', oc.appNo,
   '/ CLIP조각:', (oc.segs||[]).length, '/ 선등록행:', (oc.priorReg||[]).length,
   '/ 최종:', oc.finalCall || '(미기재)');
+
+console.log('==== 구형 2004년형 (통복사 CLIP) ====');
+var d04 = fs.readFileSync(path.join(__dirname, '샘플_구형2004.txt'), 'utf8').replace(/\r\n/g, '\n');
+var c04 = sandbox.parseCase(d04);
+console.log('형식:', c04.oldFormat ? '구형 ✓' : '신형 (오류!)', '/ 출원번호:', c04.appNo, '/ 표장명:', c04.markName);
+console.log('지정상품:', (c04.goods||[]).length + '건',
+  (c04.goods||[]).map(function(g){ return g.cls + '/' + g.code; }).join(' ; '));
+console.log('본인선행:', (c04.ownPrior||[]).length + '건 / 타인선등록:', (c04.priorReg||[]).length + '건');
+(c04.priorReg||[]).slice(0,3).forEach(function(r){
+  console.log('   #' + r.no, '[' + r.regno + ']', '표장=' + r.mark, '코드=' + r.codes, '권리자=' + r.owner);
+});
+console.log('CLIP 조각:', (c04.segs||[]).length + '개 →',
+  (c04.segs||[]).map(function(s){ var m=s.match(/^\s*【([^】]+)】/); return m?m[1]:'(무제)'; }).join(', '));
+console.log('최종판단:', c04.finalCall || '(미기재)');
