@@ -1,0 +1,28 @@
+====================================================================
+진단용 2판 — HWP 전체 텍스트 추출 경로 실측 (1,404자)
+====================================================================
+
+■ 1판과 다른 점
+- HWP ActiveX의 추가 추출 경로를 실제로 호출해 결과 크기를 보고:
+  · GetTextFile('TEXT')   → TF=글자수 (실패 시 TFx)
+  · GetTextFile('HWPML2X')→ ML=글자수 (XML 통내보내기, 글상자 포함 가능)
+  · GetText / GetBodyText → GT= / BT=
+  · InitScan+GetText 반복 → SCAN=글자수/반복횟수 (글상자 포함 스캔)
+- 프레임별 일반 텍스트 길이(len=)와 개체 목록도 1판과 동일하게 보고
+
+■ 사용법 (1판과 동일)
+1. 새 즐겨찾기의 URL에 아래 코드 (기존 진단용 즐겨찾기 교체해도 됨)
+2. "심사점검표 팝업 창 안에서" Ctrl+I → 클릭
+3. 'DIAG2 OK 숫자' 알림 → 메모장에 Ctrl+V → 내용 전달
+   (구조 정보만 담김 — 사건 내용 없음)
+
+■ 결과 해석
+- SCAN=3500/12 처럼 큰 숫자가 나오면 → 글상자 포함 전체 추출 가능!
+  → 셀프캡처를 그 방식으로 업그레이드하면 [IN]급 원클릭 수집 완성
+- 전부 x면 → API 차단 → 박스별 CLIP이 최종 경로
+
+--------------------------------------------------------------------
+[코드] (1,404자)
+--------------------------------------------------------------------
+
+javascript:(function(){var r=[];function P(e){var o='',M=['GetTextFile','GetText','GetBodyText','GetFieldText','GetPageText','SaveToString','InitScan','ReleaseScan','Copy','SelectAll'],j,v;for(j=0;j<M.length;j++){try{if(e[M[j]]!=null)o+=M[j]+';'}catch(x){}}try{v=e.GetTextFile('TEXT','');o+=' TF='+(v?(''+v).length:0)}catch(x){o+=' TFx'}try{v=e.GetTextFile('HWPML2X','');o+=' ML='+(v?(''+v).length:0)}catch(x){o+=' MLx'}try{v=e.GetText();o+=' GT='+(v?(''+v).length:0)}catch(x){o+=' GTx'}try{v=e.GetBodyText();o+=' BT='+(v?(''+v).length:0)}catch(x){o+=' BTx'}try{var g='',c=0,s;e.InitScan(0,119);while(c<500){s=e.GetText();if(!s)break;g+=s;c++}try{e.ReleaseScan()}catch(x2){}o+=' SCAN='+g.length+'/'+c}catch(x){o+=' SCANx'}return o}function Q(w,p){var d,i,e,k,T=['OBJECT','EMBED','APPLET'];try{d=w.document}catch(x){r.push(p+' NOACCESS');return}try{r.push(p+' len='+((d.body&&d.body.innerText)||'').length)}catch(x){r.push(p+' len?')}for(k=0;k<3;k++){try{e=d.getElementsByTagName(T[k]);for(i=0;i<e.length;i++)r.push(p+' '+T[k]+'#'+(e[i].id||e[i].name||i)+' cls='+((e[i].getAttribute&&(e[i].getAttribute('classid')||e[i].getAttribute('src')||''))||'').slice(0,40)+' '+P(e[i]))}catch(x){}}try{for(i=0;i<w.frames.length;i++)Q(w.frames[i],p+'/'+i)}catch(x){}}Q(window,'W');var s=r.join('\r\n');try{window.clipboardData.setData('Text',s);alert('DIAG2 OK '+r.length)}catch(x){prompt('COPY:',r.join(' | '))}})();
