@@ -1,0 +1,29 @@
+====================================================================
+셀프캡처 4판 (1,643자) ★셀프캡처 즐겨찾기 URL을 이것으로 교체★
+====================================================================
+
+■ 3판까지 실패한 이유 (진단으로 확인)
+- 창/프레임에 텍스트는 전부 접근 가능(창 26,671자, 프레임 63,524자 등)
+- 그런데 기존 수집기의 "노드 순회" 방식이 이 창들에서 먹통 → 921자
+- HWP ActiveX API(HwpRemoteCtrl 등)는 전부 차단이지만, 내용이 DOM에
+  있으므로 애초에 필요 없음
+
+■ 4판의 구조 (진단기와 동일한 뼈대 = 검증된 방식)
+- 창 → 모든 프레임을 재귀 순회 (진단기가 성공한 그 방식 그대로)
+- 문서마다: 정밀 수집(입력값·라디오 표식 보존) 시도 →
+  결과가 실제 텍스트보다 훨씬 적으면 innerText로 자동 대체
+- 진단기가 읽어낸 텍스트는 4판도 반드시 읽음
+
+■ 사용
+1. "심사점검표 팝업 창"의 바깥 영역 클릭(포커스) → Ctrl+I → 셀프캡처
+2. 알림 'COPY4 글자수 F프레임수' — 글자수가 수만 단위로 커졌을 것
+3. 메인 창 [CLIP] → +1 → [OUT] → 뷰어
+
+※ 주의: 메인 특허넷 창에서 실행하면 메인 화면 전체(메뉴 포함)가
+   담기므로, 반드시 점검표 팝업 창에서 실행할 것.
+
+--------------------------------------------------------------------
+[코드] (1,643자)
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape,O=[],F=0;function dp(d){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='IFRAME'||t=='FRAME'||t=='IMG'||t=='OBJECT'||t=='EMBED')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(d.body)}catch(e){}var t1=o.join(''),t2='';try{t2=(d.body&&d.body.innerText)||''}catch(e){}return(t1.replace(/[\s|]/g,'').length*2>=t2.replace(/\s/g,'').length)?t1:t2}function Q(w){var d;try{d=w.document}catch(e){return}F++;O.push('\n=====\n');try{O.push(dp(d))}catch(e){}try{for(var i=0;i<w.frames.length;i++)Q(w.frames[i])}catch(e){}}Q(window);var t=O.join('').replace(/\n\n\n+/g,'\n\n');if(t.replace(/[\s=]/g,'').length<100){alert('EMPTY');return}try{window.clipboardData.setData('Text',U('[%uD31D%uC5C5%uCEA1%uCC98]')+'\n'+t);alert('COPY4 '+t.length+' F'+F)}catch(e){alert('X')}})();
