@@ -1,0 +1,28 @@
+====================================================================
+v6.6 — 메인 북마클릿 (v6.5의 축약판, 3,173자 — 잘림 방지)
+====================================================================
+
+■ 배경
+- v6.5(3,383자)가 즐겨찾기에서 잘려 무반응이 되는 사례 발생
+- 검증된 길이(v6.3=3,202자) 아래로 축약. 기능 변화:
+  · 구형 HWP 자동추출(실험)을 메인에서 제거 → 셀프캡처에 이미 포함
+  · 알림 문구 축약: READY v6.6 → 'V66', CLIP EMPTY → 'EMPTY',
+    NO POPUP → 'NOPOP' (기능 동일)
+- v6.5의 핵심(2차 팝업 감시, 문서 단위 재감시, [팝업캡처] 새 건 인식,
+  [구분선])은 전부 포함
+
+■ 설치
+1. 메모장 [서식]→[자동 줄 바꿈] 반드시 해제 후 아래 코드 한 줄 전체 복사
+2. 즐겨찾기 속성 → URL 전체 교체
+3. 저장 후 속성 다시 열어 확인:
+   - 맨 앞: javascript: (IE가 지웠으면 직접 타이핑해서 되살릴 것)
+   - 맨 끝: })();
+4. 특허넷에서 클릭 → 'V66' 알림 + 오른쪽 아래 패널 확인
+
+■ 사용법은 v6.5와 동일 (국제건: IN 시도 → 안 되면 셀프캡처+CLIP)
+
+--------------------------------------------------------------------
+[코드] (3,173자)
+--------------------------------------------------------------------
+
+javascript:(function(){var W=window,U=unescape,D,B=[],S={},P=[];if(W.__a){alert('ON');return}W.__a=1;function hk(w){try{var m=w.document;if(!m.__h){var o=w.open;w.open=function(a,b,c,d){var p=null;try{p=o(a,b,c,d)}catch(e){try{p=o.call(w,a,b,c,d)}catch(e2){try{p=o.apply(w,arguments)}catch(e3){}}}try{if(p)P.push(p)}catch(e){}try{if(p)hk(p)}catch(e){}return p};m.__h=1}for(var i=0;i<w.frames.length;i++)hk(w.frames[i])}catch(e){}}hk(W);function fb(w){try{if(w.document.body.offsetWidth>200)return w}catch(e){}try{for(var i=0;i<w.frames.length;i++){var r=fb(w.frames[i]);if(r)return r}}catch(e){}}function dp(w){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='IMG')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');if(t=='IFRAME'||t=='FRAME'){try{o.push('\n=====\n');k(e.contentWindow.document.body)}catch(x){}return}for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(w.document.body)}catch(e){return null}return o.join('').replace(/\n\n\n+/g,'\n\n')}function A(t){var q=t.length+t.slice(0,99);if(S[q]){alert('DUP');return}S[q]=1;B.push(t);G('_n').innerHTML=B.length}var fw=fb(W);if(!fw){alert('NO BODY');return}D=fw.document;function G(i){return D.getElementById(i)}var v=D.createElement('div');v.style.cssText='position:fixed;right:6px;bottom:6px;z-index:99999;background:#17324D;color:#fff;padding:7px';v.innerHTML='<b id=_n>0</b> <button id=_g>IN</button> <button id=_k>CLIP</button> <button id=_x>OUT</button> <button id=_c>CLR</button>';D.body.appendChild(v);G('_g').onclick=function(){for(var i=P.length-1;i>=0;i--){try{var p=P[i];if(!p||p.closed)continue;var t=dp(p);if(t&&t.length>=300){A(t);return}}catch(e){}}alert('NOPOP')};G('_k').onclick=function(){var t='';try{t=W.clipboardData.getData('Text')||''}catch(e){}if(!t||t.length<50){alert('EMPTY');return}if(t.indexOf(U('[%uD31D%uC5C5%uCEA1%uCC98]'))==0){A(t);return}var q='c'+t.length+t.slice(0,99);if(S[q]){alert('DUP');return}S[q]=1;if(B.length){B[B.length-1]+=U('\n[%uD074%uB9BD]\n')+t;alert('+CLIP')}else{B.push(t);G('_n').innerHTML=B.length}};G('_x').onclick=function(){if(!B.length){alert(0);return}try{W.clipboardData.setData('Text',B.join('\n\n'+U('[%uAD6C%uBD84%uC120]')+'\n\n'));alert(B.length)}catch(e){alert('X')}};G('_c').onclick=function(){B.length=0;S={};G('_n').innerHTML=0};setInterval(function(){hk(W);for(var z=0;z<P.length;z++){try{var y=P[z];if(y&&!y.closed)hk(y)}catch(e){}}},1500);alert('V66')})();
