@@ -117,3 +117,13 @@ var ch3 = sandbox.splitDump(d21 + '\n\n[구분선]\n\n' + mix);
 console.log('조각 수:', ch3.length, '→', ch3.map(function(c){ return sandbox.findAppNo(c) || '(미상)'; }).join(', '));
 var ci = sandbox.parseCase(ch3[ch3.length-1]);
 console.log('국제건 카드:', ci.appNo, '/ 식별력:', ci.distinct, '/ 표장분석:', ci.markAnalysis);
+
+console.log('==== 국제건 구형(HWP 문서, 반각 괄호 표제) ====');
+var shell = '심사점검표\n | 검색범위 |  [●]전체 [○]등록 [○]심사중\n | 류코드 |  | 도형코드 |  [입력: 011315+010525+261501]\n | 질의어 |  [입력: german+germen+jerman]\n | 유사질의어 |  [입력: GermanProt+저만프롯]  [●]단순\n유사군별 지정상품\n | 류 | 유사군코드 | 지정상품 | 유사1 | 유사2 | 확인 | 유사군 변경\n | 01 | G1001 | casein concentrate for industrial purposes(공업용 카세인 농축액) |  |  |  |\n | 29 | G0704 | Casein for food purposes.(식용 카세인) |  |  |  |\n';
+var hwp = '[클립]\n[ 검색결과 ]\n[MAPS 기본사항]\n- 일반표장, 사후지정건, Limitation 없음. 출원일(소급일) : 13.08.23\n- 출원인 : 법인, 류수 : 3개류.\n■ 표장분석 : GermanProt\n- German : (형) 독일의; 독일풍[식]의, 독일인[어]의 (명) 독일인, (the Germans) 독일 국민.\n- Prot : 사전적 의미가 없으며, 다양한 단어의 약어로 쓰이는 조어.\n◇ 지정유사군 : G1001 G0302 G0704 (NICE 분류 : 01+05+29)\n(1) 400123456 GERMANO G1001 G0704 홍O동\n[ 심사내용 ]\n○ 출원공고\n[ 의견요약 ]\n[ 판단의견 ]\n○ 등록결정\n';
+var ic = sandbox.parseCase(shell + '\n' + hwp);
+console.log('형식:', ic.oldFormat ? '구형 ✓' : '신형 (오류!)', '/ 출원번호:', ic.appNo, '/ 표장명:', ic.markName);
+console.log('지정상품:', (ic.goods||[]).length + '건 / 선등록:', (ic.priorReg||[]).length + '건');
+console.log('CLIP 조각:', (ic.segs||[]).length + '개 →',
+  (ic.segs||[]).map(function(s,i){ return '조각'+(i+1)+'('+s.substring(0,12).replace(/\n/g,'')+')'; }).join(', '));
+console.log('최종판단:', ic.finalCall || '(미기재)');

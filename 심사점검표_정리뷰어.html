@@ -408,10 +408,13 @@ function parseCaseOld(chunk){
   c.segs = [];
   var parts = t.split(/\n?\[클립\]\n?/);
   for(var si=1; si<parts.length; si++){
-    var subs = parts[si].split(/(?=【[^】\n]{1,20}】)/);
+    var subs = parts[si].split(/(?=【[^】\n]{1,20}】|\[\s*(?:검색결과|심사내용|의견요약|판단의견)\s*\])/);
     for(var sj=0; sj<subs.length; sj++){
       var sv = cleanRaw(subs[sj]);
-      if(sv.replace(/【[^】]*】/g,'').replace(/\s/g,'').length > 2) c.segs.push(sv);
+      var gauge = sv.replace(/【[^】]*】/g,'')
+                    .replace(/\[\s*(검색결과|심사내용|의견요약|판단의견)\s*\]/g,'')
+                    .replace(/\s/g,'');
+      if(gauge.length > 2) c.segs.push(sv);
     }
   }
 
@@ -432,14 +435,18 @@ function parseCaseOld(chunk){
 }
 
 function parseCase(chunk){
-  /* 형식 판별: 신형 고유 표지가 하나라도 있으면 무조건 신형.
-     (신형 기재문에 '제33조' 등이 있어도 구형으로 오판하지 않음)
-     2021년 무렵 양식은 '식별력 유무판단' 라벨 없이 라디오만 나오므로 그것도 신형 표지로 인정 */
-  var isNew = chunk.indexOf('표장분석') >= 0 ||
-              /식별력\s*유무판단/.test(chunk) ||
-              /\[[●○]\]\s*식별력\s*(있|없)음/.test(chunk);
+  /* 형식 판별.
+     - 신형 확정 표지(구조): '식별력 유무판단' 라벨 또는 [●]식별력 라디오
+     - 구형 확정 표지: 【검색결과】/[ 검색결과 ] 류의 괄호 표제, [클립] 조각
+     - '표장분석'은 구형 HWP 문서의 자유서술(■ 표장분석 : ...)에도 나오므로
+       구형 확정 표지가 함께 있으면 신형 근거로 쓰지 않음 */
+  var hasNewStrong = /식별력\s*유무판단/.test(chunk) ||
+                     /\[[●○]\]\s*식별력\s*(있|없)음/.test(chunk);
+  var hasOldStrong = /[【\[]\s*(심사내용|검색결과|의견요약|판단의견)\s*[】\]]/.test(chunk) ||
+                     chunk.indexOf('[클립]') >= 0;
+  var isNew = hasNewStrong || (chunk.indexOf('표장분석') >= 0 && !hasOldStrong);
   var isOld = !isNew && (
-              /[【\[]\s*(심사내용|검색결과)\s*[】\]]/.test(chunk) ||
+              hasOldStrong ||
               (chunk.indexOf('검색결과') >= 0 && chunk.indexOf('심사내용') >= 0) ||
               /\[제\s*3[345]\s*조/.test(chunk) ||
               /기본사항[\s\S]{0,80}권리구분/.test(chunk) ||
@@ -781,10 +788,11 @@ function render(cases){
       for(var sgi=0; sgi<(c.segs||[]).length; sgi++){
         var sg = c.segs[sgi];
         var ttl = '기재 ' + (sgi+1);
-        var hm = sg.match(/^\s*【\s*([^】\n]{1,20}?)\s*】/);
+        var hm = sg.match(/^\s*【\s*([^】\n]{1,20}?)\s*】/) ||
+                 sg.match(/^\s*\[\s*(검색결과|심사내용|의견요약|판단의견)\s*\]/);
         if(hm){
           ttl = hm[1];
-          sg = sg.replace(/^\s*【[^】\n]*】[ \t]*\n?/,'');   // 표제 줄은 제목으로 승격
+          sg = sg.replace(/^\s*(?:【[^】\n]*】|\[[^\]\n]*\])[ \t]*\n?/,'');  // 표제 줄은 제목으로 승격
         }
         else if(/\(\d+\)\s*\d{9}/.test(sg)) ttl = '검색결과';
         else if(/제3[345]조|기본사항|심사검토|표장 관념/.test(sg)) ttl = '심사내용';
