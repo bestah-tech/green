@@ -1,0 +1,35 @@
+====================================================================
+v6.1 — 카운트 수정 (구형도 건당 1) + 뷰어 대개편과 한 세트
+====================================================================
+
+■ 바뀐 것
+1. 숫자 = "건수"만 표시
+   - [IN] 누르면 +1 (한 건 시작)
+   - [CLIP]은 숫자가 안 올라가고, 방금 IN한 건에 붙음
+     (성공 시 '+CLIP' 알림)
+   → 구형도 신형도 팝업 하나 = 숫자 1
+2. CLIP한 조각들이 뷰어에서 각각 그대로 표시되도록 표식 추가
+
+■ 설치: 즐겨찾기 URL을 아래 [코드]로 교체 (2,972자)
+        뷰어 HTML도 최신본으로 함께 교체 (필수 - 세트임)
+
+■ 사용
+- 신형: 팝업 열기 → [IN] → 끝
+- 구형: 팝업 열기 → [IN] → 기재 박스 클릭 → Ctrl+A → Ctrl+C
+        → [CLIP] ('+CLIP' 알림) → 다른 박스도 필요하면 반복
+  ※ 순서: 반드시 [IN] 먼저, [CLIP] 나중
+  ※ 어떤 박스를 담을지는 자유: 검색결과 박스, 판단의견 박스 등
+    담은 것만 뷰어에 각각 나옴
+- [OUT] → 뷰어 붙여넣기 → [CLR]
+
+■ 뷰어에서 구형 카드 표시 (단순화됨)
+- 지정상품 / 타인 선등록·선출원 표(검색결과 조각에서 자동 추출)
+- 그 아래 CLIP한 조각들이 담은 순서대로 "검색결과" "심사내용"
+  "판단의견" 제목으로 원문 그대로 표시
+- 신형은 예전 그대로 (표장분석/식별력/선등록 의견/종합의견/사용실태)
+
+--------------------------------------------------------------------
+[코드] (2,972자)
+--------------------------------------------------------------------
+
+javascript:(function(){var W=window,U=unescape,D,B=[],S={},P=[];if(W.__a){alert('ON');return}W.__a=1;function hk(w){try{if(!w.__h){var o=w.open;w.open=function(a,b,c,d){var p=null;try{p=o(a,b,c,d)}catch(e){try{p=o.call(w,a,b,c,d)}catch(e2){try{p=o.apply(w,arguments)}catch(e3){}}}try{if(p)P.push(p)}catch(e){}return p};w.__h=1}for(var i=0;i<w.frames.length;i++)hk(w.frames[i])}catch(e){}}hk(W);function fb(w){try{if(w.document.body.offsetWidth>200)return w}catch(e){}try{for(var i=0;i<w.frames.length;i++){var r=fb(w.frames[i]);if(r)return r}}catch(e){}}function dp(w){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='IMG')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');if(t=='IFRAME'||t=='FRAME'){try{o.push('\n=====\n');k(e.contentWindow.document.body)}catch(x){}return}for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(w.document.body)}catch(e){return null}return o.join('').replace(/\n\n\n+/g,'\n\n')}function A(t){var q=t.length+t.slice(0,99);if(S[q]){alert('DUP');return}S[q]=1;B.push(t);G('_n').innerHTML=B.length}var fw=fb(W);if(!fw){alert('NO BODY');return}D=fw.document;function G(i){return D.getElementById(i)}var v=D.createElement('div');v.style.cssText='position:fixed;right:6px;bottom:6px;z-index:99999;background:#17324D;color:#fff;padding:7px';v.innerHTML='<b id=_n>0</b> <button id=_g>IN</button> <button id=_k>CLIP</button> <button id=_x>OUT</button> <button id=_c>CLR</button>';D.body.appendChild(v);G('_g').onclick=function(){for(var i=P.length-1;i>=0;i--){try{var p=P[i];if(!p||p.closed)continue;var t=dp(p);if(t&&t.length>=300){A(t);return}}catch(e){}}alert('NO POPUP')};G('_k').onclick=function(){var t='';try{t=W.clipboardData.getData('Text')||''}catch(e){}if(!t||t.length<50){alert('CLIP EMPTY');return}var q='c'+t.length+t.slice(0,99);if(S[q]){alert('DUP');return}S[q]=1;if(B.length){B[B.length-1]+=U('\n[%uD074%uB9BD]\n')+t;alert('+CLIP')}else{B.push(t);G('_n').innerHTML=B.length}};G('_x').onclick=function(){if(!B.length){alert(0);return}try{W.clipboardData.setData('Text',B.join('\n\n'));alert(B.length)}catch(e){alert('X')}};G('_c').onclick=function(){B.length=0;S={};G('_n').innerHTML=0};setInterval(function(){hk(W)},1500);alert('READY v6')})();
