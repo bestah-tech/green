@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>선행상표 심사점검표 정리 뷰어</title>
+<style>
+/* IE11 호환: CSS 변수/그리드 미사용 */
+* { margin:0; padding:0; box-sizing:border-box; }
+/* 스크롤: html/body에 overflow를 걸면 IE(호환 문서모드)에서 휠·스크롤바가
+   먹통이 되는 사례가 있어 뷰포트 기본 스크롤만 사용한다 */
+html { background:#EDF0F4; }
+body {
+  font-family:'Malgun Gothic','맑은 고딕',AppleGothic,sans-serif;
+  color:#1C2733; font-size:13px; line-height:1.65;
+  padding:24px 18px 80px 18px; max-width:1180px; margin:0 auto;
+  word-wrap:break-word; overflow-wrap:break-word; overflow-x:hidden;
+}
+/* 어떤 셀·박스도 화면 밖으로 뻗지 않도록 */
+table { max-width:100%; }
+td, th { overflow-wrap:break-word; word-break:break-word; }
+.codes { word-break:break-all; }
+h1 { font-size:21px; letter-spacing:-0.5px; color:#17324D; }
+h1 .sub { font-size:12px; color:#6B7A8C; font-weight:normal; margin-left:10px; letter-spacing:0; }
+.topbar { border-bottom:3px solid #17324D; padding-bottom:12px; margin-bottom:16px; }
+
+/* 입력 영역 */
+.inbox { background:#FFFFFF; border:1px solid #C9D2DC; padding:14px; margin-bottom:20px; }
+.inbox label { font-weight:bold; color:#17324D; display:block; margin-bottom:6px; }
+.inbox .hint { color:#6B7A8C; font-size:12px; margin-bottom:8px; }
+textarea#src {
+  width:100%; height:180px; border:1px solid #B7C2CE; padding:10px;
+  font-family:'Malgun Gothic',monospace; font-size:12px; background:#FBFCFD;
+  resize:vertical;
+}
+.btnrow { margin-top:10px; }
+button {
+  font-family:inherit; font-size:13px; cursor:pointer;
+  border:1px solid #17324D; background:#17324D; color:#fff;
+  padding:8px 18px; margin-right:6px;
+}
+button.ghost { background:#fff; color:#17324D; }
+button.mini { padding:3px 10px; font-size:12px; }
+.card h2 button.fold { background:transparent; border:1px solid #7C93AC; color:#fff; padding:1px 9px; font-size:12px; margin-right:8px; }
+.card h2 button.fold:hover { background:#0F2438; }
+button:hover { background:#0F2438; color:#fff; }
+
+/* 요약 테이블 */
+.summary { background:#fff; border:1px solid #C9D2DC; margin-bottom:22px; display:none; }
+.summary h2, .card h2 { font-size:14px; background:#17324D; color:#fff; padding:8px 12px; font-weight:bold; }
+table.sm { width:100%; border-collapse:collapse; }
+table.sm th { background:#E7ECF2; color:#33445A; font-size:12px; padding:7px 8px; border-bottom:2px solid #B7C2CE; text-align:left; }
+table.sm td { padding:7px 8px; border-bottom:1px solid #E1E7EE; vertical-align:top; }
+table.sm tr.clickable { cursor:pointer; }
+table.sm tr.clickable:hover td { background:#F2F6FB; }
+
+/* 결과 뱃지: 도장 느낌 */
+.stamp {
+  display:inline-block; border:2px solid; border-radius:4px;
+  padding:1px 8px; font-weight:bold; font-size:12px; letter-spacing:1px;
+  background:#fff;
+}
+.stamp.reg  { color:#1E6E3C; border-color:#1E6E3C; }
+.stamp.rej  { color:#B02A2A; border-color:#B02A2A; }
+.stamp.etc  { color:#8A6A16; border-color:#8A6A16; }
+.stamp.none { color:#8A96A3; border-color:#B7C2CE; }
+.pill {
+  display:inline-block; background:#E7ECF2; color:#33445A;
+  padding:0 8px; border-radius:9px; font-size:11px; margin-left:6px;
+}
+.pill.warn { background:#FDEFD8; color:#8A5A10; }
+
+/* 건별 카드 */
+.card { background:#fff; border:1px solid #C9D2DC; margin-bottom:22px; }
+.card h2 .appno { font-family:Consolas,monospace; letter-spacing:1px; }
+.card h2 .markbig { font-size:16px; color:#FFD98A; font-weight:bold; letter-spacing:-0.3px; }
+table.sm td.markname, table.dt td.markname { font-weight:bold; }
+.card h2 .right { float:right; font-weight:normal; }
+.sec { border-top:1px solid #E1E7EE; }
+.sec-h {
+  padding:8px 12px; background:#F5F8FB; color:#17324D; font-weight:bold;
+  cursor:pointer; font-size:13px;
+}
+.sec-h .tog { color:#8A96A3; font-weight:normal; float:right; }
+.sec-b { padding:12px 16px; display:block; }
+.sec-b.closed { display:none; }
+pre.raw {
+  font-family:inherit; white-space:pre-wrap; word-break:break-all;
+  background:#FBFCFD; border-left:3px solid #C9D2DC; padding:8px 12px;
+  margin:4px 0 8px 0;
+}
+pre.raw.op { border-left-color:#D89B2B; background:#FEFAF1; }
+
+table.dt { width:100%; border-collapse:collapse; margin:4px 0 8px 0; table-layout:fixed; }
+table.dt td { word-wrap:break-word; }
+table.dt th { background:#EFF3F7; font-size:12px; padding:5px 8px; border:1px solid #D5DDE5; text-align:left; }
+table.dt td { padding:5px 8px; border:1px solid #E1E7EE; vertical-align:top; }
+table.dt tr.hasop td { background:#FEFAF1; }
+table.dt tr.bstar td { background:#FDECEC; }
+table.dt tr.bstar td:first-child { border-left:4px solid #C62828; }
+.tag-bstar { color:#C62828; font-weight:bold; font-size:14px; }
+.bstar-badge {
+  display:inline-block; background:#C62828; color:#fff;
+  padding:0 7px; border-radius:3px; font-size:11px; font-weight:bold;
+}
+.pill.red { background:#F8D7D7; color:#8B1A1A; font-weight:bold; }
+table.dt td.markname { font-weight:bold; }
+table.dt td .opinion { color:#7A5410; margin-top:2px; white-space:pre-wrap; }
+.codes { font-family:Consolas,monospace; font-size:11px; color:#55636F; }
+.tag-star { color:#D89B2B; font-weight:bold; }
+
+.filterbar { padding:8px 12px; background:#FFF; border-bottom:1px solid #E1E7EE; }
+.filterbar label { margin-right:14px; cursor:pointer; }
+.dist-yes { color:#1E6E3C; font-weight:bold; }
+.dist-no  { color:#B02A2A; font-weight:bold; }
+.footer-note { color:#8A96A3; font-size:11px; margin-top:30px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>선행상표 심사점검표 정리 뷰어 <span style="background:#17324D;color:#fff;padding:1px 8px;font-size:12px;border-radius:3px;">v8.1</span><span class="sub">북마클릿 덤프 붙여넣기 → 건별 자동 정리</span></h1>
+</div>
+
+<div class="inbox">
+  <label for="src">덤프 붙여넣기</label>
+  <div class="hint">
+    메모장에 모아둔 심사점검표 덤프를 전부 복사해서 아래에 붙여넣으세요.
+    여러 건을 이어붙여도 "출원번호"를 기준으로 자동으로 나눠서 정리합니다.
+    깨진 표시([%u25CF] 등)는 자동으로 복원됩니다.
+  </div>
+  <textarea id="src" placeholder="여기에 붙여넣기 (Ctrl+V)"></textarea>
+  <div class="btnrow">
+    <button type="button" onclick="fromClip()">클립보드에서 가져오기 (붙여넣기 생략)</button>
+    <button type="button" class="ghost" onclick="run()">붙여넣은 내용 정리하기</button>
+    <button type="button" class="ghost" onclick="resetAll()">전체 초기화</button>
+    <button type="button" class="ghost" onclick="diagAnon()" style="border-color:#8A6A16;color:#8A6A16;">진단용 추출(익명화)</button>
+  </div>
+  <div class="btnrow" style="margin-top:8px;">
+    <label><input type="checkbox" id="watch" onclick="toggleWatch()"> <b>자동 감지</b> — 2초마다 클립보드를 확인해 특허넷 [내보내기] 내용이 오면 자동 정리</label>
+    &nbsp;&nbsp;
+    <label><input type="checkbox" id="accum" checked> 기존 목록에 누적 (하루치 모아보기)</label>
+  </div>
+  <div class="hint" id="clipMsg" style="margin-top:6px;"></div>
+</div>
+
+<div class="summary" id="summary">
+  <h2>전체 요약</h2>
+  <table class="sm" id="sumTable">
+    <thead>
+      <tr>
+        <th style="width:30px">#</th>
+        <th style="width:110px">표장</th>
+        <th style="width:150px">출원번호</th>
+        <th style="width:70px">식별력</th>
+        <th>선등록 검토 (의견기재/전체)</th>
+        <th>선출원 검토</th>
+        <th style="width:100px">최종 판단</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="filterbar">
+    <label><input type="checkbox" id="onlyOp" onclick="toggleOnlyOp()"> 심사관 의견이 기재된 선행건만 표시</label>
+    <button type="button" class="mini" onclick="foldAll(1)">전체 접기</button>
+    <button type="button" class="mini" onclick="foldAll(0)">전체 펴기</button>
+  </div>
+</div>
+
+<div id="cards"></div>
+<div class="footer-note">
+  ※ 본 화면은 붙여넣은 텍스트를 브라우저 안에서만 정리하며, 어디에도 저장·전송하지 않습니다. 새로고침하면 사라집니다.
+</div>
+
+<script type="text/javascript">
+/* ===== ES5 / IE11 호환 ===== */
+
+function decodeU(s){
+  return s.replace(/%u([0-9A-Fa-f]{4})/g, function(m,h){
+    return String.fromCharCode(parseInt(h,16));
+  });
+}
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function cleanRaw(s){
+  if(!s) return '';
+  var t = s.replace(/\r/g,'');
+  t = t.replace(/^\s*\|\s*$/gm,'');        // 파이프만 있는 줄 제거
+  t = t.replace(/[ \t]*\|[ \t]*$/gm,'');   // 줄 끝 파이프 제거
+  t = t.replace(/^[ \t]*\|[ \t]*/gm,'');   // 줄 앞 파이프 제거
+  t = t.replace(/\[입력내용\]\s*\n?/g,'');
+  t = t.replace(/\n{3,}/g,'\n\n');
+  return t.replace(/^\s+|\s+$/g,'');
+}
+var CUR_BLKS = [];   /* 현재 건의 심사관 기재(입력내용) 원문 보관소 */
+
+/* 출원번호: "출원번호 : 40-...", "출원번호 | 40-..." 등 콜론/파이프 변형 모두 인식.
+   국제등록건 등에서 하이픈 없이 13자리(4020140063931)로 나오는 표기도 인식해
+   40-2014-0063931 형태로 정규화 */
+var APPRE = /출원번호[^\S\n]*[|:：]?[^\S\n]*(\d{2}-\d{4}-\d{7}|\d{13})/;
+function findAppNo(s){
+  var m = APPRE.exec(s);
+  if(!m) return '';
+  var v = m[1];
+  if(v.indexOf('-') < 0) v = v.substring(0,2) + '-' + v.substring(2,6) + '-' + v.substring(6);
+  return v;
+}
+
+function grabBlock(text, startIdx){
+  // startIdx 이후 첫 [[BLKn]] 토큰의 원문을 반환
+  var p = text.indexOf('[[BLK', startIdx);
+  if(p < 0) return '';
+  var q = text.indexOf(']]', p);
+  if(q < 0) return '';
+  var id = parseInt(text.substring(p + 5, q), 10);
+  return cleanRaw(CUR_BLKS[id] || '');
+}
+function grabBlockIn(text, start, end){
+  // start~end 구간 안의 첫 [[BLKn]] 원문 (구간 밖이면 빈값)
+  if(start < 0) return '';
+  if(end < 0 || end > text.length) end = text.length;
+  var p = text.indexOf('[[BLK', start);
+  if(p < 0 || p >= end) return '';
+  return grabBlock(text, p);
+}
+function grabInputIn(text, start, end){
+  // start~end 구간 안의 첫 [입력: 값] (한 줄짜리 입력칸)
+  if(start < 0) return '';
+  if(end < 0 || end > text.length) end = text.length;
+  var m = text.substring(start, end).match(/\[입력:\s*([^\]]+)\]/);
+  return m ? m[1].replace(/^\s+|\s+$/g,'') : '';
+}
+function valueIn(text, start, end){
+  // 구간의 기재값: 여러 줄 박스([입력내용]) 우선, 없으면 한 줄 입력칸
+  return grabBlockIn(text, start, end) || grabInputIn(text, start, end);
+}
+function section(text, startMarker, endMarkers){
+  var s = text.indexOf(startMarker);
+  if(s < 0) return null;
+  var e = text.length;
+  for(var i=0;i<endMarkers.length;i++){
+    var p = text.indexOf(endMarkers[i], s + startMarker.length);
+    if(p >= 0 && p < e) e = p;
+  }
+  return { start:s, end:e, text:text.substring(s, e) };
+}
+
+/* 선행건(선등록/선출원) 행 파싱
+   지원 변형:
+   - "N | [선택: ☆] | 4024427320000 20240603 ~ 20351022 표장명" + 다음 줄 코드/권리자 (2025형)
+   - "N | [선택: ☆] | (줄바꿈) 1450709 표장 코드들 권리자" 한 줄 (2021형, 7~9자리 번호)
+   - 선택셀과 번호 사이에 버튼 텍스트(AI35류견련조회 등)가 끼는 경우 */
+function tidyMark(s){
+  return String(s)
+    .replace(/심사점검표|AI35류견련조회|결과붙이기|정렬활성화|정렬하기/g,'')
+    .replace(/\[선택:\s*[^\]]*\]/g,'')
+    .replace(/\[입력:\s*\]/g,'')
+    .replace(/\[[○●]\]/g,'')
+    .replace(/[|×]/g,' ')
+    .replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
+}
+function parsePriorRows(sub){
+  var rows = [];
+  if(!sub) return rows;
+  /* 행 시작점: 줄머리의 "번호 |" */
+  var startRe = /(?:^|\n)[ \t]*\|?[ \t]*(\d{1,3})[ \t]*\|/g;
+  var starts = [], m;
+  while((m = startRe.exec(sub)) !== null){
+    starts.push({ no:m[1], idx:m.index, body:startRe.lastIndex });
+  }
+  for(var i=0;i<starts.length;i++){
+    var seg = sub.substring(starts[i].body,
+      (i+1 < starts.length) ? starts[i+1].idx : sub.length);
+    /* 등록/출원번호 = 행 시작 근처의 첫 7~13자리 숫자 */
+    var rm = /(^|[\s|])(\d{7,13})(?=[\s|(]|$)/.exec(seg);
+    if(!rm) continue;
+    var rIdx = rm.index + rm[1].length;
+    var prefix = seg.substring(0, rIdx);
+    if(prefix.length > 120) continue;          // 번호가 멀면 선행건 행이 아님
+    var selM = prefix.match(/\[선택:\s*([^\]]*)\]/);
+    var starSrc = selM ? selM[1] : prefix;
+    var star = starSrc.indexOf('☆') >= 0;
+    var bstar = starSrc.indexOf('★') >= 0;    // 검은 별표 = 유사 표시
+    if(!selM && star && bstar) bstar = false;  // 선택지 전체가 긁힌 덤프: ★ 오탐 방지
+    var regno = rm[2];
+    var rest = seg.substring(rIdx + regno.length);
+    /* 존속기간: "20240603 ~ 20351022" / "20230328" / "20030707 ( 20020508 ) ~ 20131201" */
+    var date = '';
+    var dm = rest.match(/^[ \t]*(\d{8})[ \t]*(\([ \t]*\d{8}[ \t]*\))?[ \t]*(?:[~∼][ \t]*(\d{8})?)?/);
+    if(dm && dm[1]){
+      date = dm[1] + (dm[3] ? '~' + dm[3] : '');
+      rest = rest.substring(dm[0].length);
+    }
+    /* 유사군코드 묶음(G/S+숫자 연속)을 찾아 표장/코드/권리자 분리 */
+    var mark = '', codes = '', owner = '';
+    var cm = /(^|[\s|])([GS]\d{3,6}[A-Z]?(?:[ \t\n]+[GS]\d{3,6}[A-Z]?)*)/.exec(rest);
+    if(cm){
+      mark = rest.substring(0, cm.index + cm[1].length);
+      codes = cm[2].replace(/\s+/g,' ');
+      var after = rest.substring(cm.index + cm[1].length + cm[2].length);
+      owner = after.split('\n')[0] || '';
+    } else {
+      mark = rest.split('\n')[0] || '';
+    }
+    mark = tidyMark(mark);
+    owner = tidyMark(owner);
+    /* 심사관 의견: 행 구간 안의 [입력내용] 블록, 없으면 [입력: 값] */
+    var opinion = '';
+    var oi = seg.indexOf('[[BLK');
+    if(oi >= 0) opinion = grabBlock(seg, oi);
+    if(!opinion){
+      var im = seg.substring(rIdx).match(/\[입력:\s*([^\]]+)\]/);
+      if(im) opinion = im[1].replace(/^\s+|\s+$/g,'');
+    }
+    rows.push({ no:starts[i].no, star:star, bstar:bstar, regno:regno, date:date,
+                mark:mark, codes:codes, owner:owner, opinion:opinion });
+  }
+  return rows;
+}
+
+function radioPick(text, options){
+  // options: [{re:정규식, label:표시}] 중 [●] 붙은 것 반환
+  for(var i=0;i<options.length;i++){
+    if(options[i].re.test(text)) return options[i].label;
+  }
+  return '';
+}
+
+/* ===== 구형(2015~16 이전) 점검표 파서 ===== */
+function parseOldRows(txt){
+  var rows = [];
+  if(!txt) return rows;
+  var re = /\((\d{1,3})\)\s*(\d{9,13})(\([^)]*\))?\s*([^\n]*)/g, m;
+  while((m = re.exec(txt)) !== null){
+    var rest = (m[3] ? m[3] + ' ' : '') + (m[4] || '');
+    var codes = rest.match(/[GS]\d{3,6}[A-Z]?/g) || [];
+    var mark = rest, owner = '', note = '';
+    if(codes.length){
+      var ci = rest.indexOf(codes[0]);
+      var lastC = codes[codes.length-1];
+      var li = rest.lastIndexOf(lastC) + lastC.length;
+      mark = rest.substring(0, ci);
+      owner = rest.substring(li);
+    }
+    var ai = owner.indexOf('→');
+    if(ai >= 0){ note = owner.substring(ai); owner = owner.substring(0, ai); }
+    else {
+      var ai2 = mark.indexOf('→');
+      if(ai2 >= 0){ note = mark.substring(ai2); mark = mark.substring(0, ai2); }
+    }
+    function tidy(s){ return s.replace(/[\s,|]+/g,' ').replace(/^\s+|\s+$/g,''); }
+    rows.push({ no:m[1], star:false, bstar:false, regno:m[2], date:'',
+                mark:tidy(mark), codes:codes.join(' '), owner:tidy(owner),
+                opinion: note ? tidy(note) : '' });
+  }
+  return rows;
+}
+
+function parseCaseOld(chunk){
+  var c = { oldFormat:true };
+  var t = chunk;
+  c.raw = chunk;
+
+  c.appNo = findAppNo(t) || '(번호미상)';
+
+  var sq = t.match(/유사질의어[^\[\n]{0,30}\[입력:\s*([^\]]+)\]/);
+  c.simQuery = sq ? sq[1].replace(/^\s+|\s+$/g,'') : '';
+
+  c.markName = '';
+  if(c.simQuery){
+    var tok = c.simQuery.split(/[+&,|]/)[0].replace(/^[\/\s]+|\s+$/g,'');
+    if(tok) c.markName = tok;
+  }
+
+  /* 지정상품 (좌측 류/유사군코드/지정상품 표) */
+  c.goods = [];
+  var gre = /\|\s*(\d{1,2})\s*\|\s*([GS][GS\d,\sA-Z]*?)\s*\|\s*([^|]+?)\s*\|/g, gm;
+  while((gm = gre.exec(t)) !== null){
+    var gcodes = (gm[2].match(/[GS]\d{3,6}[A-Z]?/g) || []).join(' ');
+    if(!gcodes) continue;
+    c.goods.push({ cls:gm[1], code:gcodes, name:gm[3].replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'') });
+  }
+
+  /* ===== 단순화된 구형 처리 =====
+     CLIP으로 담은 조각([클립] 마커로 구분)을 순서대로 그대로 보여준다.
+     검색결과 조각에서는 타인 선등록/선출원 표만 추출. */
+
+  function grp(txt, name, ends){
+    var i = txt.indexOf(name);
+    if(i < 0) return '';
+    var e = txt.length;
+    for(var k=0;k<ends.length;k++){
+      var p = txt.indexOf(ends[k], i + name.length);
+      if(p >= 0 && p < e) e = p;
+    }
+    return txt.substring(i, e);
+  }
+  var g1 = grp(t, '본인 선출원', ['본인 선등록','타인 선등록','타인 선출원']);
+  var g2 = grp(t, '본인 선등록', ['타인 선등록','타인 선출원']);
+  var g3 = grp(t, '타인 선등록', ['타인 선출원']);
+  var g4 = grp(t, '타인 선출원', []);
+  c.ownPrior = parseOldRows(g1).concat(parseOldRows(g2));
+  c.priorReg = parseOldRows(g3);
+  c.priorApp = parseOldRows(g4);
+  if(!c.ownPrior.length && !c.priorReg.length && !c.priorApp.length){
+    c.priorReg = parseOldRows(t);   // 소구분 없이 나열된 경우
+  }
+
+  /* CLIP 조각 분해.
+     한 조각 안에 【검색결과】【심사내용】【의견요약】【판단의견】 표제가
+     여러 개 들어있으면(문서 통복사) 표제 단위로 다시 나눈다. */
+  c.segs = [];
+  var TITLE_RE = /(?=【[^】\n]{1,20}】|\[\s*(?:검색결과|심사내용|의견요약|판단의견)\s*\])/;
+  function pushSegs(block){
+    var subs = block.split(TITLE_RE);
+    for(var sj=0; sj<subs.length; sj++){
+      var sv = cleanRaw(subs[sj]);
+      var gauge = sv.replace(/【[^】]*】/g,'')
+                    .replace(/\[\s*(검색결과|심사내용|의견요약|판단의견)\s*\]/g,'')
+                    .replace(/\s/g,'');
+      if(gauge.length > 2) c.segs.push(sv);
+    }
+  }
+  var parts = t.split(/\n?\[클립\]\n?/);
+  for(var si=1; si<parts.length; si++) pushSegs(parts[si]);
+  if(!c.segs.length){
+    /* [클립] 조각이 없어도(셀프캡처가 프레임을 직접 담은 경우)
+       본문에서 표제 구간을 찾아 조각으로 승격. 표제 이전(껍데기)은 제외,
+       각 구간은 다음 프레임 경계(=====)에서 자름 */
+    var tm = t.split(TITLE_RE);
+    for(var ti=1; ti<tm.length; ti++) pushSegs(tm[ti].split(/\n?=====\n?/)[0]);
+  }
+
+  /* 요약 판정: 조각들에서 식별력·최종판단만 읽음 */
+  var allSeg = c.segs.join('\n');
+  c.distinct = /식별력\s*있음/.test(allSeg) ? '있음'
+             : (/식별력\s*없음/.test(allSeg) ? '없음' : '');
+  var foHits = [];
+  if(/등록결정/.test(allSeg)) foHits.push('등록결정');
+  if(/거절결정/.test(allSeg)) foHits.push('거절결정');
+  if(/취소환송/.test(allSeg)) foHits.push('취소환송');
+  c.finalCall = (foHits.length === 1) ? foHits[0] : '';
+
+  c.examText=''; c.opSummary=''; c.finalOpinion='';
+  c.markAnalysis=''; c.distinctReason=''; c.overall='';
+  c.usage=''; c.art34=''; c.art34Note=''; c.first=''; c.second='';
+  return c;
+}
+
+function parseCase(chunk){
+  /* 형식 판별.
+     - 신형 확정 표지(구조): '식별력 유무판단' 라벨 또는 [●]식별력 라디오
+     - 구형 확정 표지: 【검색결과】/[ 검색결과 ] 류의 괄호 표제, [클립] 조각
+     - '표장분석'은 구형 HWP 문서의 자유서술(■ 표장분석 : ...)에도 나오므로
+       구형 확정 표지가 함께 있으면 신형 근거로 쓰지 않음 */
+  var hasNewStrong = /식별력\s*유무판단/.test(chunk) ||
+                     /\[[●○]\]\s*식별력\s*(있|없)음/.test(chunk);
+  var hasOldStrong = /[【\[]\s*(심사내용|검색결과|의견요약|판단의견)\s*[】\]]/.test(chunk) ||
+                     chunk.indexOf('[클립]') >= 0;
+  var isNew = hasNewStrong || (chunk.indexOf('표장분석') >= 0 && !hasOldStrong);
+  var isOld = !isNew && (
+              hasOldStrong ||
+              (chunk.indexOf('검색결과') >= 0 && chunk.indexOf('심사내용') >= 0) ||
+              /\[제\s*3[345]\s*조/.test(chunk) ||
+              /기본사항[\s\S]{0,80}권리구분/.test(chunk) ||
+              /심사검토\s*내용/.test(chunk) ||
+              chunk.indexOf('[클립]') >= 0);
+  if(isOld){
+    return parseCaseOld(chunk);
+  }
+  var c = {};
+  var t = chunk;
+  c.raw = chunk;
+
+  /* 심사관 기재([입력내용]) 블록을 토큰으로 치환해 보호.
+     자유서술 안의 '유사판단', '사용실태' 같은 단어가 구획 표지와
+     충돌해 내용이 잘리는 것을 방지. 표시할 때 원문 그대로 복원됨.
+     블록의 끝 = 덤프 생성기가 만든 표식([○][●], [선택:], [입력:])이 있는 줄,
+     파이프만 있는 줄, 프레임 경계(=====), 다음 선행건 행 시작, 문서 끝. */
+  CUR_BLKS = [];
+  t = t.replace(/\[입력내용\][ \t]*\n?([\s\S]*?)(?=\n[ \t]*\||\n[^\n]*\[[○●]\]|\n[^\n]*\[선택:|\n[^\n]*\[입력:|\n[ \t]*=====|\n[ \t]*\|?[ \t]*\d{1,3}[ \t]*\|[^\n]{0,110}\n?[ \t]*\d{7,13}|$)/g,
+    function(mm, body){
+      CUR_BLKS.push(body);
+      return '[[BLK' + (CUR_BLKS.length - 1) + ']]\n';
+    });
+
+  c.appNo = findAppNo(t) || '(번호미상)';
+
+  /* ── 구획 기준점 수집 (양식마다 순서·표기가 달라 위치 기반으로 자름) ── */
+  function rpos(re, from){
+    if(from < 0) from = 0;
+    var m = re.exec(t.substring(from));
+    return m ? from + m.index : -1;
+  }
+  var paS    = t.indexOf('표장분석');
+  var dLabel = rpos(/식별력\s*유무판단/, 0);
+  var dRadio = rpos(/\[[●○]\]\s*식별력\s*(있|없)음/, 0);
+  var dStart = dLabel >= 0 ? dLabel : dRadio;
+  var base   = dStart >= 0 ? dStart : (paS >= 0 ? paS : 0);
+  var simS   = rpos(/\n[^\n]{0,8}유사판단/, base);
+  var useS   = rpos(/\n[^\n]{0,8}사용실태/, simS >= 0 ? simS : base);
+  var etcS   = rpos(/기타\s*34조/, 0);
+  var appS   = rpos(/\n[ \t]*(?:\|[ \t]*)?출원인[ \t]*(?:\n|\|)/, etcS >= 0 ? etcS : 0);
+  var pdS    = t.indexOf('판단의견');
+  var f1     = rpos(/1차\s*착수심사\s*결과/, 0);
+  var f2     = rpos(/2차\s*착수심사\s*결과/, 0);
+  var osS    = rpos(/의견요약/, 0);
+  var defS   = rpos(/정의규정/, 0);
+  var AN = [paS, dStart, simS, useS, etcS, appS, pdS, f1, f2, osS, defS];
+  function aEnd(p){
+    var e = t.length;
+    for(var i=0;i<AN.length;i++)
+      if(AN[i] > p && AN[i] < e) e = AN[i];
+    return e;
+  }
+
+  /* 지정상품 (좌측 프레임 표. 헤더가 없으면 표장분석 이전 영역에서 표 모양 탐색) */
+  c.goods = [];
+  function goodsScan(txt){
+    var out = [];
+    var gre = /\|[ \t]*(\d{1,2})[ \t]*\|[ \t]*([GS][\dA-Z]{3,7}(?:[ \t,]+[GS][\dA-Z]{3,7})*)[ \t]*\|[ \t]*([^|]+?)[ \t]*\|/g, gm;
+    while((gm = gre.exec(txt)) !== null){
+      var nm = gm[3].replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
+      if(!nm || nm.indexOf('[') >= 0) continue;
+      out.push({ cls:gm[1], code:gm[2].replace(/[,\s]+/g,' '), name:nm });
+    }
+    return out;
+  }
+  var gsS = rpos(/류\/유사군별\s*지정상품/, 0);
+  if(gsS >= 0){
+    var ge = t.indexOf('=====', gsS);
+    c.goods = goodsScan(t.substring(gsS, ge >= 0 ? ge : t.length));
+  }
+  if(!c.goods.length && paS > 0) c.goods = goodsScan(t.substring(0, paS));
+
+  /* 유사질의어 */
+  var sq = t.match(/유사질의어[^\[\n]{0,40}\[입력:\s*([^\]]+)\]/);
+  c.simQuery = sq ? sq[1].replace(/^\s+|\s+$/g,'') : '';
+
+  /* 표장명 추정: ① 기본사항 '한글' 필드 ② '영문' 필드 ③ 유사질의어 첫 토큰
+     (④ 다른 카드의 선행건 목록 역참조는 render 단계에서 보완) */
+  c.markName = '';
+  var hn = t.match(/한글\s*\|\s*([^|\n]{1,40}?)\s*\|/);
+  if(hn && /\S/.test(hn[1]) && hn[1].indexOf('띄어쓰기') < 0) c.markName = hn[1].replace(/^\s+|\s+$/g,'');
+  if(!c.markName){
+    var en = t.match(/영문\s*\|\s*([^|\n]{1,60}?)\s*\|/);
+    if(en && /\S/.test(en[1])) c.markName = en[1].replace(/^\s+|\s+$/g,'');
+  }
+  if(!c.markName && c.simQuery){
+    var tok = c.simQuery.split(/[+&,|]/)[0].replace(/^[\/\s]+|\s+$/g,'');
+    if(tok) c.markName = tok;
+  }
+
+  /* 표장분석: 표장분석 표제 ~ 식별력 구획 사이의 기재 */
+  c.markAnalysis = paS >= 0 ? valueIn(t, paS, (dStart > paS ? dStart : aEnd(paS))) : '';
+
+  /* 식별력: 라벨이 없어도 라디오 표식으로 직접 판정 */
+  c.distinct = '';
+  if(/\[●\]\s*식별력\s*있음/.test(t)) c.distinct = '있음';
+  else if(/\[●\]\s*식별력\s*없음/.test(t)) c.distinct = '없음';
+  c.distinctReason = dStart >= 0 ? valueIn(t, dStart, (simS > dStart ? simS : aEnd(dStart))) : '';
+
+  /* 유사판단 구간 */
+  var simEnd = t.length;
+  if(useS > simS && useS >= 0) simEnd = useS;
+  else if(etcS > simS) simEnd = etcS;
+  var simText = simS >= 0 ? t.substring(simS, simEnd) : '';
+
+  /* 유사판단 내부 작업영역: 말미의 '심판번호 검색 이력' 이전까지 */
+  var wCut = simText.search(/심판번호\s*검색\s*이력/);
+  var workText = wCut >= 0 ? simText.substring(0, wCut) : simText;
+
+  /* 종합의견: 작업영역의 마지막 [입력내용] 블록이 행 소속인지 독립 블록인지 판별 */
+  c.overall = '';
+  var rowsRegion = workText;
+  var lastBlk = workText.lastIndexOf('[[BLK');
+  if(lastBlk >= 0){
+    var rowRe2 = /(?:^|\n)[ \t]*\|?[ \t]*\d{1,3}[ \t]*\|[^\n]{0,110}\n?[ \t]*\d{7,13}/g, rm2, lastRow = -1;
+    while((rm2 = rowRe2.exec(workText)) !== null) lastRow = rm2.index;
+    var isOverall = false;
+    if(lastRow < 0){
+      isOverall = true;                       // 선행건 행이 없으면 통째로 종합의견
+    } else if(lastBlk > lastRow){
+      var between = workText.substring(lastRow, lastBlk);
+      var cntBlk = between.split('[[BLK').length - 1;
+      if(cntBlk >= 1){
+        isOverall = true;                     // 마지막 행에 이미 의견 블록이 있음 → 별도 종합의견
+      } else {
+        // 마지막 행에 의견이 없는 경우: 내용으로 판별
+        var blkTxt = grabBlock(workText, lastBlk);
+        if(/[▣]|관찰|종합|동일유사|표장검색|유사판단/.test(blkTxt)) isOverall = true;
+      }
+    }
+    if(isOverall){
+      c.overall = grabBlock(workText, lastBlk);
+      rowsRegion = workText.substring(0, lastBlk);
+    }
+  }
+
+  /* 본인/타인 선등록·선출원: 구획 표제 위치로 잘라 각각 행 파싱 */
+  c.ownPrior = []; c.priorReg = []; c.priorApp = [];
+  var secDefs = [
+    { key:'own', re:/본인\s*선등록/ },
+    { key:'own', re:/본인\s*선출원/ },
+    { key:'own', re:/본인\s*동일자/ },
+    { key:'reg', re:/타인\s*선등록/ },
+    { key:'app', re:/타인\s*선출원/ }
+  ];
+  var secPos = [], si, sm2;
+  for(si=0; si<secDefs.length; si++){
+    sm2 = secDefs[si].re.exec(rowsRegion);
+    if(sm2) secPos.push({ key:secDefs[si].key, pos:sm2.index });
+  }
+  secPos.sort(function(a,b){ return a.pos - b.pos; });
+  for(si=0; si<secPos.length; si++){
+    var sEnd = (si+1 < secPos.length) ? secPos[si+1].pos : rowsRegion.length;
+    var got = parsePriorRows(rowsRegion.substring(secPos[si].pos, sEnd));
+    if(secPos[si].key === 'own') c.ownPrior = c.ownPrior.concat(got);
+    else if(secPos[si].key === 'reg') c.priorReg = c.priorReg.concat(got);
+    else c.priorApp = c.priorApp.concat(got);
+  }
+
+  /* 사용실태 */
+  c.usage = useS >= 0 ? valueIn(t, useS, aEnd(useS)) : '';
+
+  /* 기타 34조 */
+  var etcEnd = etcS >= 0 ? aEnd(etcS) : -1;
+  c.art34 = etcS >= 0 ? radioPick(t.substring(etcS, etcEnd), [
+    { re:/\[●\]\s*해당사항\s*있음/, label:'해당사항 있음' },
+    { re:/\[●\]\s*해당사항\s*없음/, label:'해당사항 없음' }
+  ]) : '';
+  c.art34Note = etcS >= 0 ? valueIn(t, etcS, etcEnd) : '';
+
+  /* 착수심사결과 / 의견요약 */
+  c.first  = f1 >= 0 ? valueIn(t, f1, aEnd(f1)) : '';
+  c.second = f2 >= 0 ? valueIn(t, f2, aEnd(f2)) : '';
+  c.opSummary = osS >= 0 ? valueIn(t, osS, aEnd(osS)) : '';
+
+  /* 최종 판단 + 판단 사유 (판단의견 구획이 양식에 따라 앞이나 뒤에 옴) */
+  c.finalCall = ''; c.finalOpinion = '';
+  if(pdS >= 0){
+    var pdEnd = aEnd(pdS);
+    c.finalCall = radioPick(t.substring(pdS, pdEnd), [
+      { re:/\[●\]\s*등록결정/, label:'등록결정' },
+      { re:/\[●\]\s*거절결정/, label:'거절결정' },
+      { re:/\[●\]\s*취소환송/, label:'취소환송' }
+    ]);
+    c.finalOpinion = valueIn(t, pdS, pdEnd);
+  }
+
+  return c;
+}
+
+/* ===== 렌더링 ===== */
+
+function stampHtml(call){
+  if(call === '등록결정') return '<span class="stamp reg">등록결정</span>';
+  if(call === '거절결정') return '<span class="stamp rej">거절결정</span>';
+  if(call === '취소환송') return '<span class="stamp etc">취소환송</span>';
+  return '<span class="stamp none">미기재</span>';
+}
+function distHtml(d){
+  if(d === '있음') return '<span class="dist-yes">있음</span>';
+  if(d === '없음') return '<span class="dist-no">없음</span>';
+  return '<span class="stamp none">미기재</span>';
+}
+function priorTable(rows, kind){
+  if(!rows.length) return '<div style="color:#8A96A3;">해당 없음</div>';
+  var h = '<table class="dt"><tr><th style="width:28px">#</th><th style="width:110px">번호</th>' +
+          '<th>표장</th><th style="width:200px">유사군 / 권리자</th><th style="width:42%">심사관 의견</th></tr>';
+  for(var i=0;i<rows.length;i++){
+    var r = rows[i];
+    var cl = [r.opinion ? 'hasop' : 'noop'];
+    if(r.bstar) cl.push('bstar');
+    var starMark = r.bstar ? '<span class="tag-bstar">★</span> '
+                 : (r.star ? '<span class="tag-star">☆</span> ' : '');
+    h += '<tr class="' + cl.join(' ') + '">' +
+      '<td>' + starMark + esc(r.no) + '</td>' +
+      '<td><span class="codes">' + esc(r.regno) + '</span><br><span class="codes">' + esc(r.date) + '</span></td>' +
+      '<td class="markname">' + (r.bstar ? '<span class="bstar-badge">유사</span> ' : '') + esc(r.mark) + '</td>' +
+      '<td><span class="codes">' + esc(r.codes) + '</span><br>' + esc(r.owner) + '</td>' +
+      '<td>' + (r.opinion ? '<div class="opinion">' + esc(r.opinion) + '</div>' : '<span style="color:#B7C2CE;">-</span>') + '</td>' +
+      '</tr>';
+  }
+  return h + '</table>';
+}
+function secHtml(title, bodyHtml, open){
+  var cls = open ? '' : ' closed';
+  return '<div class="sec">' +
+    '<div class="sec-h" onclick="togSec(this)">' + esc(title) +
+    '<span class="tog">' + (open ? '접기 ▲' : '펼치기 ▼') + '</span></div>' +
+    '<div class="sec-b' + cls + '">' + bodyHtml + '</div></div>';
+}
+function togSec(h){
+  var b = h.nextSibling;
+  while(b && b.nodeType !== 1) b = b.nextSibling;
+  if(!b) return;
+  var closed = b.className.indexOf('closed') >= 0;
+  b.className = closed ? 'sec-b' : 'sec-b closed';
+  var tg = h.getElementsByTagName('span')[0];
+  if(tg) tg.innerHTML = closed ? '접기 ▲' : '펼치기 ▼';
+}
+
+var JUNK_WORDS = {'문구삽입':1,'검색결과':1,'결과붙이기':1,'검색결과항목':1,'타인':1,'본인':1,
+  '번호재정렬':1,'유사없음':1,'심사내용':1,'출원공고':1,'의견제출':1,'부분우선권':1,
+  '의견서요약':1,'의견':1,'검토':1,'지적상품':1,'심사보류':1,'판단의견':1,'등록결정':1,
+  '거절결정':1,'취소환송':1,'복사':1,'붙이기':1,'검색범위':1,'전체해제':1,'인쇄':1};
+function cleanOldRaw(s){
+  /* 구형 원문 표시용: 사이드 메뉴 단어 나열·빈 기호 줄 제거 */
+  if(!s) return '';
+  var lines = s.split('\n'), out = [], i, L;
+  for(i=0;i<lines.length;i++){
+    L = lines[i].replace(/^[\s|]+|[\s|]+$/g,'');
+    if(L === '' || L === '>' ) continue;
+    if(/^[\[\]○●=\s|]+$/.test(L)) continue;          // [○], ===== 등 기호만
+    if(JUNK_WORDS[L]) continue;                        // 메뉴 단어 단독 줄
+    if(/^\[선택:\s*\]$/.test(L)) continue;             // 빈 선택 표시
+    out.push(lines[i]);
+  }
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').replace(/^\s+|\s+$/g,'');
+}
+
+function buildNameMap(cases){
+  /* 모든 카드의 선행건 목록에서 번호→표장명 지도를 만들어
+     표장명이 비어있는 카드를 보완 (본건 점검표를 함께 담으면 정확도↑) */
+  var nmap = {}, i, j;
+  function dg(s){ return String(s).replace(/\D/g,''); }
+  for(i=0;i<cases.length;i++){
+    var lists = [cases[i].priorReg || [], cases[i].priorApp || []];
+    if(cases[i].ownPrior) lists.push(cases[i].ownPrior);
+    for(var li=0;li<lists.length;li++){
+      var L = lists[li];
+      for(j=0;j<L.length;j++){
+        var k = dg(L[j].regno);
+        if(k && L[j].mark && !nmap[k]) nmap[k] = L[j].mark;
+      }
+    }
+  }
+  for(i=0;i<cases.length;i++){
+    var c0 = cases[i];
+    if(!c0.markName){
+      var k0 = dg(c0.appNo);
+      if(nmap[k0]) c0.markName = nmap[k0];
+    }
+  }
+}
+
+function render(cases){
+  buildNameMap(cases);
+  var sumBody = '';
+  var cardsHtml = '';
+  var i;
+  for(i=0;i<cases.length;i++){
+    var c = cases[i];
+    var opRegCnt = 0, j;
+    for(j=0;j<c.priorReg.length;j++) if(c.priorReg[j].opinion) opRegCnt++;
+    var opAppCnt = 0;
+    for(j=0;j<c.priorApp.length;j++) if(c.priorApp[j].opinion) opAppCnt++;
+    var bCnt = 0;
+    for(j=0;j<c.priorReg.length;j++) if(c.priorReg[j].bstar) bCnt++;
+    for(j=0;j<c.priorApp.length;j++) if(c.priorApp[j].bstar) bCnt++;
+
+    sumBody += '<tr class="clickable" onclick="goCard(' + i + ')">' +
+      '<td>' + (i+1) + '</td>' +
+      '<td class="markname">' + (c.markName ? esc(c.markName) : '<span style="color:#B7C2CE;">-</span>') + '</td>' +
+      '<td><span class="codes">' + esc(c.appNo) + '</span>' +
+        (bCnt ? ' <span class="pill red">★ 유사 ' + bCnt + '</span>' : '') + '</td>' +
+      '<td>' + distHtml(c.distinct) + '</td>' +
+      '<td>' + opRegCnt + ' / ' + c.priorReg.length + '건' +
+        (opRegCnt ? '<span class="pill warn">의견 ' + opRegCnt + '</span>' : '') + '</td>' +
+      '<td>' + opAppCnt + ' / ' + c.priorApp.length + '건' + '</td>' +
+      '<td>' + stampHtml(c.finalCall) + '</td></tr>';
+
+    var body = '';
+    /* 지정상품 */
+    var gh = '';
+    if(c.goods.length){
+      gh = '<table class="dt"><tr><th style="width:40px">류</th><th style="width:80px">유사군</th><th>지정상품</th></tr>';
+      for(j=0;j<c.goods.length;j++){
+        gh += '<tr><td>' + esc(c.goods[j].cls) + '</td><td><span class="codes">' +
+              esc(c.goods[j].code) + '</span></td><td>' + esc(c.goods[j].name) + '</td></tr>';
+      }
+      gh += '</table>';
+    } else gh = '<div style="color:#8A96A3;">추출된 지정상품 없음</div>';
+    body += secHtml('지정상품 (' + c.goods.length + ')', gh, false);
+
+    if(c.oldFormat){
+      /* 구형: CLIP 조각을 순서대로 그대로 표시 */
+      if(!c.segs || !c.segs.length){
+        body += '<div class="sec"><div class="sec-b" style="background:#FDF3E0;color:#7A5410;">' +
+          '아직 담긴 기재가 없습니다. 팝업의 기재 박스(검색결과·판단의견 등)를 클릭 → ' +
+          '<b>Ctrl+A</b> → <b>Ctrl+C</b> → <b>[CLIP]</b>. 박스 여러 개를 이어서 담아도 됩니다. ' +
+          '(건수는 [IN] 기준 1건으로 유지)</div></div>';
+      }
+      if(c.ownPrior && c.ownPrior.length)
+        body += secHtml('본인 선출원·선등록 (' + c.ownPrior.length + '건)', priorTable(c.ownPrior, 'own'), false);
+      if(c.priorReg.length)
+        body += secHtml('타인 선등록 (' + c.priorReg.length + '건)', priorTable(c.priorReg, 'reg'), true);
+      if(c.priorApp.length)
+        body += secHtml('타인 선출원 (' + c.priorApp.length + '건)', priorTable(c.priorApp, 'app'), true);
+      for(var sgi=0; sgi<(c.segs||[]).length; sgi++){
+        var sg = c.segs[sgi];
+        var ttl = '기재 ' + (sgi+1);
+        var hm = sg.match(/^\s*【\s*([^】\n]{1,20}?)\s*】/) ||
+                 sg.match(/^\s*\[\s*(검색결과|심사내용|의견요약|판단의견)\s*\]/);
+        if(hm){
+          ttl = hm[1];
+          sg = sg.replace(/^\s*(?:【[^】\n]*】|\[[^\]\n]*\])[ \t]*\n?/,'');  // 표제 줄은 제목으로 승격
+        }
+        else if(/\(\d+\)\s*\d{9}/.test(sg)) ttl = '검색결과';
+        else if(/제3[345]조|기본사항|심사검토|표장 관념/.test(sg)) ttl = '심사내용';
+        else if(/의견요약/.test(sg)) ttl = '의견요약';
+        else {
+          var fh = 0;
+          if(/등록결정/.test(sg)) fh++;
+          if(/거절결정/.test(sg)) fh++;
+          if(/취소환송/.test(sg)) fh++;
+          if(fh === 1 && sg.length < 400) ttl = '판단의견';
+        }
+        body += secHtml(ttl, '<pre class="raw' + (/판단의견/.test(ttl)?' op':'') + '">' + esc(sg) + '</pre>', true);
+      }
+    } else {
+
+    if(c.finalOpinion)
+      body += secHtml('판단의견 사유', '<pre class="raw op">' + esc(c.finalOpinion) + '</pre>', true);
+
+    if(c.markAnalysis)
+      body += secHtml('표장분석', '<pre class="raw">' + esc(c.markAnalysis) + '</pre>', false);
+
+    body += secHtml('식별력 판단 — ' + (c.distinct || '미기재'),
+      '<div style="margin-bottom:6px;">식별력: ' + distHtml(c.distinct) + '</div>' +
+      (c.distinctReason ? '<pre class="raw">' + esc(c.distinctReason) + '</pre>' : ''), true);
+
+    if(c.ownPrior && c.ownPrior.length)
+      body += secHtml('본인 선등록·선출원 (' + c.ownPrior.length + '건)',
+        priorTable(c.ownPrior, 'own'), false);
+
+    body += secHtml('타인 선등록 (' + c.priorReg.length + '건 · 의견 ' + opRegCnt + '건)',
+      priorTable(c.priorReg, 'reg'), true);
+    body += secHtml('타인 선출원 (' + c.priorApp.length + '건 · 의견 ' + opAppCnt + '건)',
+      priorTable(c.priorApp, 'app'), true);
+
+    if(c.overall)
+      body += secHtml('유사판단 종합의견', '<pre class="raw op">' + esc(c.overall) + '</pre>', true);
+    if(c.usage)
+      body += secHtml('사용실태', '<pre class="raw">' + esc(c.usage) + '</pre>', false);
+    if(c.art34 || c.art34Note)
+      body += secHtml('기타 34조 판단 — ' + (c.art34 || '미기재'),
+        (c.art34Note ? '<pre class="raw">' + esc(c.art34Note) + '</pre>' : '<div style="color:#8A96A3;">기재 없음</div>'), false);
+    if(c.first || c.second)
+      body += secHtml('착수심사 결과',
+        (c.first ? '<div><b>1차:</b></div><pre class="raw">' + esc(c.first) + '</pre>' : '') +
+        (c.second ? '<div><b>2차:</b></div><pre class="raw">' + esc(c.second) + '</pre>' : ''), false);
+    if(c.opSummary)
+      body += secHtml('의견요약', '<pre class="raw">' + esc(c.opSummary) + '</pre>', false);
+    }
+
+    /* 진단용: 담긴 원문을 그대로 확인 (파싱 누락 시 여기서 확인 가능)
+       출원번호를 못 찾은 건은 펼친 상태로 표시 */
+    var unknown = (c.appNo === '(번호미상)');
+    var rawShow = c.oldFormat ? cleanOldRaw(c.raw || '') : (c.raw || '');
+    body += secHtml('원문 전체 보기' + (unknown ? ' — 출원번호 미검출' : ' (진단용)'),
+      (unknown ? '<div style="background:#FDF3E0;color:#7A5410;padding:8px;margin-bottom:8px;">' +
+        '이 덩어리에서 "출원번호 40-XXXX-XXXXXXX" 표기를 찾지 못했습니다. 아래 원문에 출원번호가 보이면 알려주세요 (형식을 추가하겠습니다). ' +
+        '원문에 검색 영역이 통째로 없다면, [IN]을 누르기 직전에 연 창이 점검표 팝업인지 확인하세요. (IN은 마지막으로 연 팝업을 담습니다)' +
+        '</div>' : '') +
+      '<pre class="raw" style="max-height:420px;overflow:auto;">' + esc(rawShow || '(원문 없음)') + '</pre>', unknown);
+
+    cardsHtml += '<div class="card" id="card' + i + '">' +
+      '<h2>' +
+      (c.markName ? '<span class="markbig">' + esc(c.markName) + '</span> ' : '') +
+      '<span class="appno">' + esc(c.appNo) + '</span>' +
+      (c.oldFormat ? ' <span class="pill">구형식</span>' : '') +
+      (c.simQuery ? ' <span class="pill">' + esc(c.simQuery) + '</span>' : '') +
+      (bCnt ? ' <span class="pill red">★ 유사 ' + bCnt + '건</span>' : '') +
+      '<span class="right"><button type="button" class="fold" id="fb' + i + '" onclick="togCard(' + i + ')">접기 ▲</button>' + stampHtml(c.finalCall) + '</span></h2>' +
+      '<div class="card-b" id="cb' + i + '">' + body + '</div></div>';
+  }
+  document.getElementById('sumTable').getElementsByTagName('tbody')[0].innerHTML = sumBody;
+  document.getElementById('cards').innerHTML = cardsHtml;
+  document.getElementById('summary').style.display = 'block';
+}
+
+function setFold(i, fold){
+  var b = document.getElementById('cb' + i);
+  var btn = document.getElementById('fb' + i);
+  if(!b) return;
+  b.style.display = fold ? 'none' : '';
+  if(btn) btn.innerHTML = fold ? '펴기 ▼' : '접기 ▲';
+}
+function togCard(i){
+  var b = document.getElementById('cb' + i);
+  if(!b) return;
+  setFold(i, b.style.display !== 'none');
+}
+function foldAll(fold){
+  for(var i=0;i<allCases.length;i++) setFold(i, !!fold);
+}
+function goCard(i){
+  setFold(i, false);
+  var el = document.getElementById('card' + i);
+  if(el && el.scrollIntoView) el.scrollIntoView(true);
+}
+function toggleOnlyOp(){
+  var on = document.getElementById('onlyOp').checked;
+  var tables = document.getElementById('cards').getElementsByTagName('tr');
+  for(var i=0;i<tables.length;i++){
+    var tr = tables[i];
+    if(tr.className.indexOf('noop') >= 0){
+      tr.style.display = on ? 'none' : '';
+    }
+  }
+}
+
+/* ===== 누적 저장소 ===== */
+var allCases = [];
+var caseSigs = {};
+var clipSig = '';
+var watchTimer = null;
+
+function msg(s){
+  var m = document.getElementById('clipMsg');
+  if(m) m.innerHTML = s;
+}
+function splitDump(t){
+  /* 건 분리.
+     ① 북마클릿 v6.2 이상: [구분선] 표식으로 정확히 분리.
+     ② 구버전 덤프: 출원번호 표기 위치에서 분리하되,
+        - 출원번호가 없는 앞부분(좌측 프레임의 지정상품 표 등)은 다음 조각에 합침
+        - 같은 출원번호가 프레임마다 반복 등장해 쪼개진 조각은 도로 합침 */
+  t = t.replace(/\[팝업캡처\]/g, '[구분선]');   // 셀프캡처 표식도 건 구분으로 취급
+  if(t.indexOf('[구분선]') >= 0){
+    var parts = t.split(/\n?\[구분선\]\n?/), outs = [], i;
+    for(i=0;i<parts.length;i++) if(/\S/.test(parts[i])) outs.push(parts[i]);
+    return outs;
+  }
+  var raw = t.split(/(?=출원번호[^\S\n]*[|:：]?[^\S\n]*(?:\d{2}-\d{4}-\d{7}|\d{13}))/);
+  var chunks = [], j;
+  for(j=0;j<raw.length;j++){
+    if(!raw[j]) continue;
+    if(!chunks.length){ chunks.push(raw[j]); continue; }
+    var prevNo = findAppNo(chunks[chunks.length-1]);
+    var curNo = findAppNo(raw[j]);
+    if(!prevNo || (curNo && curNo === prevNo)){
+      chunks[chunks.length-1] += raw[j];      // 머리 조각 붙이기 / 같은 건 재결합
+    } else {
+      chunks.push(raw[j]);
+    }
+  }
+  return chunks;
+}
+function importText(raw, silent){
+  if(!raw || raw.replace(/\s/g,'') === ''){
+    if(!silent) alert('내용이 비어 있습니다.');
+    return 0;
+  }
+  var t = decodeU(raw).replace(/\r\n/g,'\n');
+  var chunks = splitDump(t);
+  var accum = document.getElementById('accum').checked;
+  if(!accum){ allCases = []; caseSigs = {}; }
+  var added = 0;
+  for(var i=0;i<chunks.length;i++){
+    /* 의미 있는 분량이면 무조건 카드로 만든다.
+       출원번호가 없으면 (번호미상)으로 표시하고 원문을 보여줌. */
+    if(chunks[i].replace(/\s/g,'').length < 80) continue;
+    {
+      try {
+        var c = parseCase(chunks[i]);
+        var sig = c.appNo + '|' + chunks[i].length + '|' + chunks[i].replace(/\s/g,'').substring(0,60);
+        if(caseSigs[sig]) continue;   // 같은 건 중복 방지
+        caseSigs[sig] = 1;
+        allCases.push(c);
+        added++;
+      } catch(e){ /* 개별 건 파싱 실패 시 건너뜀 */ }
+    }
+  }
+  if(!allCases.length){
+    if(!silent) alert('가져온 내용이 너무 짧습니다. 특허넷 패널에서 [OUT]을 눌러 복사한 뒤 다시 시도하세요.');
+    return 0;
+  }
+  render(allCases);
+  var now = new Date();
+  var hh = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  msg('[' + hh + '] ' + added + '건 추가됨 · 현재 총 ' + allCases.length + '건 표시 중');
+  if(added && !silent) document.getElementById('summary').scrollIntoView(true);
+  return added;
+}
+function diagAnon(){
+  var raw = document.getElementById('src').value || '';
+  if(raw.replace(/\s/g,'') === ''){ alert('먼저 덤프를 붙여넣으세요.'); return; }
+  var t = decodeU(raw).replace(/\r\n/g,'\n');
+  /* 구조 표지는 남기고, 사람 이름·표장·긴 한글은 마스킹 */
+  var KEEP = ['표장분석','사전적','실제적','관념','식별력','유무판단','있음','없음',
+    '유사판단','유사질의어','질의어','타인','선등록','선출원','본인','종합','관찰',
+    '사용실태','기타','34조','해당사항','출원인','자연인','법인','정의규정','착수심사',
+    '판단의견','등록결정','거절결정','취소환송','입력','입력내용','선택','심판번호',
+    '검색이력','지정상품','유사군','류','검색결과','심사내용','의견요약','기본사항',
+    '표장','동일유사','관념','호칭','외관','비유사','요부','전체관찰','식별력있음','식별력없음'];
+  var keepSet = {}; for(var i=0;i<KEEP.length;i++) keepSet[KEEP[i]] = 1;
+  /* 라인 구조/기호/영문/숫자/코드/괄호표시는 유지, 그 외 한글 실단어만 O로 치환 */
+  var out = t.replace(/[가-힣]{2,}/g, function(w){
+    if(keepSet[w]) return w;
+    /* 조사·구조어 일부 보존 */
+    if(/^(그리고|또는|이건|본원|본건|해당|경우|대한|위한|통해|없음|있음|아니|하며|하고|되어|보아|같은|또한)$/.test(w)) return w;
+    return 'O'.repeat(Math.min(w.length,4));
+  });
+  document.getElementById('src').value = out;
+  msg('익명화 완료 — 사람이름·표장이 O로 바뀌었습니다. 이 내용을 복사해서 전달하면 구조 진단이 가능합니다. (구조 표지·기호·코드·줄나눔은 그대로 보존됨)');
+  try{ window.clipboardData && window.clipboardData.setData('Text', out); }catch(e){}
+}
+function run(){
+  importText(document.getElementById('src').value, false);
+}
+function readClip(){
+  try {
+    if(window.clipboardData) return window.clipboardData.getData('Text');
+  } catch(e){}
+  return null;
+}
+function fromClip(){
+  var t = readClip();
+  if(t === null){
+    alert('이 브라우저에서는 클립보드 직접 읽기가 지원되지 않습니다.\n(IE에서 열면 지원됩니다)\n입력칸에 Ctrl+V로 붙여넣은 뒤 "붙여넣은 내용 정리하기"를 이용하세요.');
+    return;
+  }
+  if(!t || t.replace(/\s/g,'') === ''){ alert('클립보드가 비어 있습니다.\n특허넷에서 [내보내기]를 먼저 누르세요.'); return; }
+  clipSig = t.length + '|' + t.substring(0,80);
+  importText(t, false);
+}
+function toggleWatch(){
+  var on = document.getElementById('watch').checked;
+  if(on){
+    if(readClip() === null){
+      alert('이 브라우저에서는 클립보드 자동 감지가 지원되지 않습니다. (IE에서 열면 지원)');
+      document.getElementById('watch').checked = false;
+      return;
+    }
+    watchTimer = window.setInterval(function(){
+      var t = readClip();
+      if(!t) return;
+      var sig = t.length + '|' + t.substring(0,80);
+      if(sig === clipSig) return;          // 이미 처리한 내용
+      clipSig = sig;
+      if(!APPRE.test(decodeU(t))) return; // 점검표 덤프가 아니면 무시
+      importText(t, true);
+    }, 2000);
+    msg('자동 감지 작동 중 — 특허넷에서 [내보내기]만 누르면 이 화면에 자동 반영됩니다. (권한 확인창이 뜨면 "허용"을 누르세요. 확인창이 반복되면 자동 감지를 끄고 버튼 방식을 이용하세요.)');
+  } else {
+    if(watchTimer){ window.clearInterval(watchTimer); watchTimer = null; }
+    msg('자동 감지 꺼짐');
+  }
+}
+function resetAll(){
+  if(allCases.length && !window.confirm('표시 중인 ' + allCases.length + '건을 모두 지울까요?')) return;
+  allCases = []; caseSigs = {}; clipSig = '';
+  document.getElementById('src').value = '';
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('cards').innerHTML = '';
+  msg('');
+}
+</script>
+</body>
+</html>
