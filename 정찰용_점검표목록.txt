@@ -1,0 +1,34 @@
+====================================================================
+정찰용 북마클릿 — 심사점검표 "목록 화면" 구조 파악용 (1회용)
+  = 자동 매크로(별표 건만 골라 팝업 열고 수집)를 만들기 위한 사전 조사
+====================================================================
+
+■ 목적
+- 목록 화면에서 아래 정보를 클립보드에 담아옴:
+  1) 화면의 프레임 구성 (제목/주소)
+  2) ActiveX(OBJECT) 컨트롤 존재 여부 — 그리드가 ActiveX인지 판별
+  3) 모든 링크(A)의 표시글자 + href + onclick 함수 내용
+     → 점검표 팝업을 여는 함수 이름과 인자 형태 파악
+  4) 별표/북마크 계열 아이콘 이미지 (star/mark/bkmk/fav/chk 등)
+  5) '선출원'/'선등록'/★가 들어간 표 행(TR) + 행 안의
+     체크박스 상태(*표시=체크됨)와 이미지 파일명
+
+■ 사용법
+1. 특허넷에서 출원상표 심사점검표 "목록"이 보이는 상태로 이동
+   (타인선출원/본인선출원/본인선등록/타인선등록 + 별표가 보이는 화면)
+2. 이 북마클릿 클릭 → 알림 'OK (프레임수)F (글자수)'
+3. 메모장(또는 뷰어 입력칸)에 Ctrl+V → 내용을 통째로 저장
+4. 그 내용을 다음 대화 때 붙여넣어 주면, 그걸 보고
+   자동 매크로 본편(설치용+실행용 2개)을 만들어 드림
+
+■ 참고
+- 읽기만 하고 아무것도 누르거나 바꾸지 않음 (안전)
+- 별표 판별이 애매하면: 별표 "있는" 행과 "없는" 행이 둘 다
+  보이는 상태에서 실행해 주면 차이를 비교할 수 있어 가장 좋음
+- 결과가 너무 길면 60,000자에서 자름 ([CUT] 표시)
+
+--------------------------------------------------------------------
+[코드]
+--------------------------------------------------------------------
+
+javascript:(function(){var U=unescape,O=[],F=0;function C(s,n){s=(''+s).replace(/\s+/g,' ');return s.length>n?s.slice(0,n)+'..':s}function Q(w){var d,i,j,e;try{d=w.document}catch(x){return}F++;try{O.push('\n===[F'+F+'] '+C(d.title,40)+' | '+C(w.location.href,140)+'\n')}catch(x){O.push('\n===[F'+F+']\n')}try{var ob=d.getElementsByTagName('OBJECT');for(i=0;i<ob.length;i++){e=ob[i];O.push('OBJ id='+(e.id||'-')+' cls='+C(e.getAttribute('classid')||'-',60)+'\n')}}catch(x){}try{var a=d.getElementsByTagName('A');for(i=0;i<a.length;i++){e=a[i];var oc=e.onclick?(''+e.onclick):'';var h=e.href||'';if(!oc&&h.indexOf('javascript:')!=0)continue;O.push('A'+i+' T='+C(e.innerText,40)+' H='+C(h,140)+(oc?' OC='+C(oc,250):'')+'\n')}}catch(x){}try{var g=d.getElementsByTagName('IMG');for(i=0;i<g.length;i++){e=g[i];var o2=e.onclick?(''+e.onclick):'';var s=''+(e.src||'');s=s.slice(s.lastIndexOf('/')+1);if(o2||/star|mark|bkmk|fav|imp|chk/i.test(s))O.push('IMG'+i+' S='+C(s,40)+(e.alt?' ALT='+C(e.alt,20):'')+(o2?' OC='+C(o2,200):'')+'\n')}}catch(x){}try{var K=[U('%uC120%uCD9C%uC6D0'),U('%uC120%uB4F1%uB85D'),U('%u2605'),U('%u22C6')];var r=d.getElementsByTagName('TR');for(i=0;i<r.length;i++){e=r[i];var tx='';try{tx=e.innerText||''}catch(x){}var hit=e.onclick?1:0;for(j=0;j<K.length;j++)if(tx.indexOf(K[j])>=0)hit=1;if(!hit)continue;O.push('TR'+i+' T='+C(tx,160));if(e.onclick)O.push(' OC='+C(''+e.onclick,180));try{var n=e.getElementsByTagName('INPUT');for(j=0;j<n.length;j++)O.push(' IN['+(n[j].type||'')+(n[j].checked?'*':'')+' '+(n[j].name||n[j].id||'')+']')}catch(x){}try{var m=e.getElementsByTagName('IMG');for(j=0;j<m.length;j++){var s2=''+(m[j].src||'');O.push(' IMG['+C(s2.slice(s2.lastIndexOf('/')+1),30)+']')}}catch(x){}O.push('\n')}}catch(x){}try{for(i=0;i<w.frames.length;i++)Q(w.frames[i])}catch(x){}}Q(window);var t=O.join('');if(t.length>60000)t=t.slice(0,60000)+'\n[CUT]';if(t.replace(/\s/g,'').length<40){alert('EMPTY');return}try{window.clipboardData.setData('Text',t);alert('OK '+F+'F '+t.length)}catch(x){alert('X')}})();
