@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>심사점검표 뷰어 v2</title>
+<style>
+body{font-family:"맑은 고딕",'Malgun Gothic',돋움,Dotum,sans-serif;margin:0;padding:0 0 60px 0;background:#eef1f6;color:#222;font-size:13px}
+#top{background:#12356b;color:#fff;padding:10px 14px}
+#top h1{font-size:16px;margin:0 0 8px 0}
+#top .tip{color:#bcd;font-size:12px;margin:0 0 6px 0}
+#in{width:98%;height:110px;font-size:12px}
+#btns{margin-top:8px}
+#btns button{margin-right:6px;padding:3px 10px;cursor:pointer}
+#btns label{color:#dde;margin-right:10px}
+#cnt{color:#ffd76e;font-weight:bold}
+.card{background:#fff;border:1px solid #c5cfdf;margin:10px 14px}
+.hd{background:#e7edf8;padding:6px 8px;border-bottom:1px solid #c5cfdf;font-weight:bold}
+.hd .no{color:#12356b;margin-right:6px}
+.hd button{margin-right:8px;padding:1px 8px;cursor:pointer}
+.bd{padding:8px}
+pre{margin:0;white-space:pre-wrap;word-wrap:break-word;font-family:inherit;font-size:13px;line-height:1.55}
+</style>
+</head>
+<body>
+<div id="top">
+  <h1>심사점검표 뷰어 v2</h1>
+  <p class="tip">자동수집(M2)이나 셀프캡처가 담아준 클립보드를 아래 칸에 Ctrl+V → [정리하기]</p>
+  <textarea id="in"></textarea>
+  <div id="btns">
+    <button onclick="go()">붙여넣은 내용 정리하기</button>
+    <label><input type="checkbox" id="acc" checked> 기존 목록에 누적</label>
+    <button onclick="allTg(0)">전체 접기</button>
+    <button onclick="allTg(1)">전체 펴기</button>
+    <button onclick="clr()">목록 비우기</button>
+    <span id="cnt"></span>
+  </div>
+</div>
+<div id="list"></div>
+<script>
+var A=[];
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function parse(t){
+  t=t.replace(/\r\n?/g,'\n');
+  var MK='[팝업캡처]',GB='[구분선]';
+  var out=[],ch=t.split(GB),i,j;
+  for(i=0;i<ch.length;i++){
+    var ps=ch[i].split(MK);
+    for(j=0;j<ps.length;j++){
+      var s=ps[j].replace(/\n\n\n+/g,'\n\n').replace(/^\s+|\s+$/g,'');
+      if(s.replace(/[\s=\|]/g,'').length<30)continue;
+      out.push(s);
+    }
+  }
+  return out;
+}
+function title(s){
+  var n=s.match(/4\d{12}/)||s.match(/4\d-\d{4}-\d{7}/);
+  var ln=s.split('\n'),t='',i;
+  for(i=0;i<ln.length;i++){
+    var v=ln[i].replace(/^[\s=\|]+|\s+$/g,'');
+    if(v.length>=4&&v.charAt(0)!='[')
+    {t=v;break}
+  }
+  if(t.length>70)t=t.substring(0,70)+'…';
+  return (n?n[0]+' — ':'')+t;
+}
+function render(){
+  var h='',i;
+  for(i=0;i<A.length;i++){
+    h+='<div class="card"><div class="hd">'
+      +'<button id="b'+i+'" onclick="tg('+i+')">접기</button>'
+      +'<span class="no">['+(i+1)+']</span>'+esc(title(A[i]))
+      +'</div><div class="bd" id="c'+i+'"><pre>'+esc(A[i])+'</pre></div></div>';
+  }
+  document.getElementById('list').innerHTML=h;
+  document.getElementById('cnt').innerHTML='총 '+A.length+'건';
+}
+function go(){
+  var v=document.getElementById('in').value;
+  if(!v||v.replace(/\s/g,'').length<10){alert('붙여넣은 내용이 없습니다');return}
+  var p=parse(v);
+  if(!p.length){alert('인식된 건이 없습니다');return}
+  if(!document.getElementById('acc').checked)A=[];
+  A=A.concat(p);
+  document.getElementById('in').value='';
+  render();
+}
+function tg(i){
+  var c=document.getElementById('c'+i),b=document.getElementById('b'+i);
+  if(c.style.display=='none'){c.style.display='';b.innerHTML='접기'}
+  else{c.style.display='none';b.innerHTML='펴기'}
+}
+function allTg(op){
+  var i;
+  for(i=0;i<A.length;i++){
+    var c=document.getElementById('c'+i),b=document.getElementById('b'+i);
+    if(!c)continue;
+    c.style.display=op?'':'none';
+    b.innerHTML=op?'접기':'펴기';
+  }
+}
+function clr(){
+  if(!confirm('목록을 비울까요?'))return;
+  A=[];render();
+}
+</script>
+</body>
+</html>
