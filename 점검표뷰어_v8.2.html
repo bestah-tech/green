@@ -9,7 +9,7 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 /* 스크롤: html/body에 overflow를 걸면 IE(호환 문서모드)에서 휠·스크롤바가
    먹통이 되는 사례가 있어 뷰포트 기본 스크롤만 사용한다 */
-html { background:#EDF0F4; }
+html { background:#EDF0F4; overflow-y:scroll; }
 body {
   font-family:'Malgun Gothic','맑은 고딕',AppleGothic,sans-serif;
   color:#1C2733; font-size:13px; line-height:1.65;
@@ -41,7 +41,8 @@ button {
 }
 button.ghost { background:#fff; color:#17324D; }
 button.mini { padding:3px 10px; font-size:12px; }
-.card h2 button.fold { background:transparent; border:1px solid #7C93AC; color:#fff; padding:1px 9px; font-size:12px; margin-right:8px; }
+.card h2 { zoom:1; overflow:hidden; cursor:pointer; }
+.card h2 button.fold { background:transparent; border:1px solid #7C93AC; color:#fff; padding:1px 9px; font-size:12px; margin-right:8px; cursor:pointer; }
 .card h2 button.fold:hover { background:#0F2438; }
 button:hover { background:#0F2438; color:#fff; }
 
@@ -119,7 +120,7 @@ table.dt td .opinion { color:#7A5410; margin-top:2px; white-space:pre-wrap; }
 <body>
 
 <div class="topbar">
-  <h1>선행상표 심사점검표 정리 뷰어 <span style="background:#17324D;color:#fff;padding:1px 8px;font-size:12px;border-radius:3px;">v8.1</span><span class="sub">북마클릿 덤프 붙여넣기 → 건별 자동 정리</span></h1>
+  <h1>선행상표 심사점검표 정리 뷰어 <span style="background:#17324D;color:#fff;padding:1px 8px;font-size:12px;border-radius:3px;">v8.2</span><span class="sub">북마클릿 덤프 붙여넣기 → 건별 자동 정리</span></h1>
 </div>
 
 <div class="inbox">
@@ -169,7 +170,7 @@ table.dt td .opinion { color:#7A5410; margin-top:2px; white-space:pre-wrap; }
 
 <div id="cards"></div>
 <div class="footer-note">
-  ※ 본 화면은 붙여넣은 텍스트를 브라우저 안에서만 정리하며, 어디에도 저장·전송하지 않습니다. 새로고침하면 사라집니다.
+  ※ 본 화면은 붙여넣은 텍스트를 브라우저 안에서만 정리하며, 어디에도 저장·전송하지 않습니다. 새로고침하면 사라집니다.<span id="dmode"></span>
 </div>
 
 <script type="text/javascript">
@@ -866,16 +867,17 @@ function render(cases){
         '이 덩어리에서 "출원번호 40-XXXX-XXXXXXX" 표기를 찾지 못했습니다. 아래 원문에 출원번호가 보이면 알려주세요 (형식을 추가하겠습니다). ' +
         '원문에 검색 영역이 통째로 없다면, [IN]을 누르기 직전에 연 창이 점검표 팝업인지 확인하세요. (IN은 마지막으로 연 팝업을 담습니다)' +
         '</div>' : '') +
-      '<pre class="raw" style="max-height:420px;overflow:auto;">' + esc(rawShow || '(원문 없음)') + '</pre>', unknown);
+      '<pre class="raw">' + esc(rawShow || '(원문 없음)') + '</pre>', unknown);
 
     cardsHtml += '<div class="card" id="card' + i + '">' +
-      '<h2>' +
+      '<h2 onclick="togCard(' + i + ')">' +
+      '<button type="button" class="fold" id="fb' + i + '">접기 ▲</button>' +
       (c.markName ? '<span class="markbig">' + esc(c.markName) + '</span> ' : '') +
       '<span class="appno">' + esc(c.appNo) + '</span>' +
       (c.oldFormat ? ' <span class="pill">구형식</span>' : '') +
       (c.simQuery ? ' <span class="pill">' + esc(c.simQuery) + '</span>' : '') +
       (bCnt ? ' <span class="pill red">★ 유사 ' + bCnt + '건</span>' : '') +
-      '<span class="right"><button type="button" class="fold" id="fb' + i + '" onclick="togCard(' + i + ')">접기 ▲</button>' + stampHtml(c.finalCall) + '</span></h2>' +
+      '<span class="right">' + stampHtml(c.finalCall) + '</span></h2>' +
       '<div class="card-b" id="cb' + i + '">' + body + '</div></div>';
   }
   document.getElementById('sumTable').getElementsByTagName('tbody')[0].innerHTML = sumBody;
@@ -1060,6 +1062,7 @@ function resetAll(){
   document.getElementById('cards').innerHTML = '';
   msg('');
 }
+(function(){var el=document.getElementById('dmode');if(el)el.innerHTML=' · 문서모드: '+(document.documentMode||'구형(quirks)');})();
 </script>
 </body>
 </html>
