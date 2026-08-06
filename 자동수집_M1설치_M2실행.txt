@@ -1,0 +1,66 @@
+====================================================================
+심사점검표 자동수집 매크로 — 즐겨찾기 2개 세트 (M1 설치 + M2 실행)
+  = 별표 친 선행건만 골라 점검표 팝업을 자동으로 열고 → 수집 → 클립보드
+====================================================================
+
+■ 무엇을 하나
+- 심사점검표 화면(타인선출원/본인선출원/본인선등록/타인선등록)에서
+  드롭다운으로 별표(흰별표/까만별표/만료별표 아무거나)를 고른 행만 골라:
+  1) 그 행의 [심사점검표] 버튼을 자동으로 눌러 팝업을 열고
+  2) 셀프캡처 6판과 같은 수집(신형 DOM + 구형 GetFieldTextData)을 하고
+  3) 팝업을 닫고 다음 별표 건으로 진행
+  4) 전부 끝나면 클립보드에 몰아서 기록 → 뷰어에 Ctrl+V 한 번이면 끝
+- '안고르기' 상태(빈 칸)인 행은 건드리지 않음
+
+■ 설치
+- 즐겨찾기 2개를 만들어 URL에 아래 [M1 코드], [M2 코드]를 각각 넣기
+  (한 개로 합치면 이 PC의 길이 제한(약 2,963자)에 걸려서 2개로 나눔)
+  · M1 = 수집 엔진 설치 (2,078자)
+  · M2 = 별표 건 스캔 + 자동 실행 (2,411자)
+
+■ 사용법
+1. 심사점검표 화면에서 별표 드롭다운을 평소처럼 골라 놓기
+2. 그 창에서 [M1] 클릭 → 알림 'M1'
+3. 이어서 [M2] 클릭 → '○건 수집?' 확인창 → [확인]
+4. 팝업이 저절로 열렸다 닫혔다 하며 진행됨 (건당 약 5~25초)
+   ※ 진행 중에는 마우스/키보드 대지 말고, 다른 복사(Ctrl+C)도 금지
+5. 끝나면 알림 'OK 성공수/전체수' → 뷰어 입력칸에 Ctrl+V
+   → [붙여넣은 내용 정리하기] 하면 건별로 정리됨 (셀프캡처와 같은 형식)
+6. 실패 건이 있으면 알림에 'F:번호' 로 표시됨
+   → 그 건만 평소처럼 [심사점검표] 눌러서 셀프캡처로 수동 보완
+
+■ 알림/오류 뜻
+- 'M1?' : M1을 안 누르고 M2부터 누름 → M1 먼저
+- 'NF'  : 심사점검표 내용 화면을 못 찾음 → 점검표가 보이는 창에서 실행
+- '0'   : 별표 고른 행이 하나도 없음
+- 'RUN' : 이미 실행 중 (끝날 때까지 대기)
+- 'X'   : 클립보드 기록 실패
+
+■ 주의
+- 화면에 보이는 페이지의 별표 건만 수집됨 ([이전]/[다음] 페이지는
+  페이지 넘긴 뒤 M2를 다시 누르면 됨. M1은 창마다 한 번이면 충분)
+- 팝업을 한 번에 하나만 열고 닫으므로 서버 부하는 수동 클릭과 동일
+- 한 건이 20초 넘게 안 열리면 실패 처리하고 다음 건으로 넘어감
+
+--------------------------------------------------------------------
+[M1 코드] 수집 엔진 설치 (2,078자)
+--------------------------------------------------------------------
+
+javascript:(function(){var W=window,U=unescape,M=W.__M={};M.FN=['SRCH_RSLT','EXMN_CONT','RMKS_SMRY_TL','EXMNR_DCSN_CMNT_TL'];M.FT=[U('[%u0020%uAC80%uC0C9%uACB0%uACFC%u0020]'),U('[%u0020%uC2EC%uC0AC%uB0B4%uC6A9%u0020]'),U('[%u0020%uC758%uACAC%uC694%uC57D%u0020]'),U('[%u0020%uD310%uB2E8%uC758%uACAC%u0020]')];M.dp=function(d){var o=[];function k(n){var i,e,t,x;if(!n)return;if(n.nodeType==3){x=n.nodeValue.replace(/\s+/g,' ');if(/\S/.test(x))o.push(x);return}if(n.nodeType!=1)return;e=n;t=e.tagName.toUpperCase();if(t=='SCRIPT'||t=='STYLE')return;try{var c=e.currentStyle;if(c&&(c.display=='none'||c.visibility=='hidden'))return}catch(x){}if(t=='INPUT'){var y=(e.type||'').toLowerCase();if(y=='radio'||y=='checkbox')o.push(U(e.checked?' [%u25CF]':' [%u25CB]'));else if(y=='text'&&/\S/.test(e.value))o.push(U(' [%uC785%uB825: ')+e.value+'] ');return}if(t=='TEXTAREA'){if(/\S/.test(e.value))o.push(U('\n[%uC785%uB825%uB0B4%uC6A9]\n')+e.value+'\n');return}if(t=='SELECT'){try{if(e.selectedIndex>=0)o.push(U(' [%uC120%uD0DD: ')+e.options[e.selectedIndex].text+'] ')}catch(x){}return}if(t=='IFRAME'||t=='FRAME'||t=='IMG'||t=='OBJECT'||t=='EMBED')return;var b=/^(DIV|P|TR|TABLE|LI|BR|HR)$/.test(t);if(b)o.push('\n');if(t=='TD'||t=='TH')o.push(' | ');for(i=0;i<n.childNodes.length;i++)k(n.childNodes[i]);if(b)o.push('\n')}try{k(d.body)}catch(e){}return o.join('')};M.hw=function(d,FV){var i,j,v,L=[];try{var a=d.getElementsByTagName('OBJECT');for(i=0;i<a.length;i++)L.push(a[i])}catch(x){}try{var b=d.getElementsByTagName('EMBED');for(i=0;i<b.length;i++)L.push(b[i])}catch(x){}for(i=0;i<L.length;i++)for(j=0;j<4;j++){if(FV[j])continue;try{v=L[i].GetFieldTextData(M.FN[j]);if(v&&/\S/.test(''+v))FV[j]=''+v}catch(x){}}};M.cap=function(w){var t='',FV=['','','',''];function Q(x){var dd;try{dd=x.document}catch(e){return}t+='\n=====\n';try{t+=M.dp(dd)}catch(e){}try{M.hw(dd,FV)}catch(e){}try{for(var i=0;i<x.frames.length;i++)Q(x.frames[i])}catch(e){}}Q(w);for(var j=0;j<4;j++)if(FV[j])t+=U('\n[%uD074%uB9BD]\n')+M.FT[j]+'\n'+FV[j]+'\n';return t.replace(/\n\n\n+/g,'\n\n')};alert('M1')})();
+
+--------------------------------------------------------------------
+[M2 코드] 별표 건 스캔 + 자동 실행 (2,411자)
+--------------------------------------------------------------------
+
+javascript:(function(){var W=window,U=unescape,M=W.__M;if(!M){alert('M1?');return}if(W.__R){alert('RUN');return}function ff(w){try{if((''+w.location.href).indexOf('getProcExmntCtbstCont')>=0)return w}catch(e){}try{for(var i=0;i<w.frames.length;i++){var r=ff(w.frames[i]);if(r)return r}}catch(e){}return null}var P=[];function hk(w){try{if(!w.__ho){var o=w.open;w.open=function(a,b,c,e){var p=null;try{p=o(a,b,c,e)}catch(x){try{p=o.call(w,a,b,c,e)}catch(x2){}}try{if(p)P.push(p)}catch(x){}return p};w.__ho=1}}catch(x){}try{for(var i=0;i<w.frames.length;i++)hk(w.frames[i])}catch(x){}}var fw=ff(W);if(!fw){alert('NF');return}var d=fw.document,KW=U('%uC2EC%uC0AC%uC810%uAC80%uD45C'),Q=[],se=d.getElementsByTagName('SELECT'),i,j;for(i=0;i<se.length;i++){var s=se[i];if(s.selectedIndex<=0)continue;var r=s.parentNode,b=null,lv;for(lv=0;lv<3&&!b;lv++){while(r&&(''+r.tagName).toUpperCase()!='TR')r=r.parentNode;if(!r)break;var c=[],a=r.getElementsByTagName('INPUT'),bt=r.getElementsByTagName('BUTTON');for(j=0;j<a.length;j++){var y=(a[j].type||'').toLowerCase();if((y=='button'||y=='submit')&&(''+a[j].value).indexOf(KW)>=0)c.push(a[j])}for(j=0;j<bt.length;j++)if((''+(bt[j].innerText||'')).indexOf(KW)>=0)c.push(bt[j]);if(c.length==1)b=c[0];else if(c.length>1)break;else r=r.parentNode}if(!b)continue;var dup=0;for(j=0;j<Q.length;j++)if(Q[j]==b)dup=1;if(!dup)Q.push(b)}if(!Q.length){alert('0');return}if(!confirm(Q.length+U('%uAC74 %uC218%uC9D1?')))return;W.__R=1;hk(W);var ix=0,ph=null,tk=0,st=0,R=[],FL=[];var T=W.setInterval(function(){try{hk(W);if(st==0){if(ix>=Q.length){W.clearInterval(T);W.__R=0;if(!R.length){alert('0/'+Q.length);return}try{W.clipboardData.setData('Text',R.join('\n'));alert('OK '+R.length+'/'+Q.length+(FL.length?' F:'+FL.join(','):''))}catch(e){alert('X')}return}P.length=0;try{Q[ix].click()}catch(e){}tk=0;st=1;return}if(st==1){tk++;var p=null,k;for(k=P.length-1;k>=0;k--){try{if(P[k]&&!P[k].closed){p=P[k];break}}catch(e){}}var ok=0;if(p){try{var bd=p.document.body;if(bd&&(bd.innerText||'').length>300)ok=1}catch(e){}}if(ok){ph=p;st=2;tk=0;return}if(tk>40){FL.push(ix+1);st=3;tk=0}return}if(st==2){tk++;if(tk<6)return;var tx='';try{tx=M.cap(ph)}catch(e){}if(tx&&tx.replace(/[\s=\|]/g,'').length>=100)R.push(U('[%uD31D%uC5C5%uCEA1%uCC98]')+'\n'+tx);else FL.push(ix+1);try{ph.close()}catch(e){}ph=null;st=3;tk=0;return}if(st==3){tk++;if(tk<3)return;ix++;st=0;return}}catch(e){}},500)})();
+
+--------------------------------------------------------------------
+■ 동작 원리 요약 (참고)
+- 정찰 결과, 점검표 내용 프레임(getProcExmntCtbstCont.do)은 일반 표라서
+  각 행의 별표 드롭다운(첫 항목='안고르기')이 선택돼 있는지로 판별
+- 별표 행에서 글자가 '심사점검표'인 버튼을 찾아 코드로 대신 클릭
+  (행 기준으로 딱 1개일 때만 클릭 → 엉뚱한 버튼 누를 일 없음)
+- window.open 가로채기(v6.7 방식)로 팝업 손잡이를 잡고,
+  본문이 채워질 때까지 기다렸다가(최대 20초) 3초 더 안정 후 수집
+- 수집 결과는 셀프캡처와 동일한 [팝업캡처]/[클립] 표식 형식이라
+  뷰어의 [붙여넣은 내용 정리하기]가 그대로 인식함
