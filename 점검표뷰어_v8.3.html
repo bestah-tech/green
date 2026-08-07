@@ -120,7 +120,7 @@ table.dt td .opinion { color:#7A5410; margin-top:2px; white-space:pre-wrap; }
 <body>
 
 <div class="topbar">
-  <h1>선행상표 심사점검표 정리 뷰어 <span style="background:#17324D;color:#fff;padding:1px 8px;font-size:12px;border-radius:3px;">v8.2</span><span class="sub">북마클릿 덤프 붙여넣기 → 건별 자동 정리</span></h1>
+  <h1>선행상표 심사점검표 정리 뷰어 <span style="background:#17324D;color:#fff;padding:1px 8px;font-size:12px;border-radius:3px;">v8.3</span><span class="sub">북마클릿 덤프 붙여넣기 → 건별 자동 정리</span></h1>
 </div>
 
 <div class="inbox">
@@ -138,12 +138,14 @@ table.dt td .opinion { color:#7A5410; margin-top:2px; white-space:pre-wrap; }
     <button type="button" class="ghost" onclick="diagAnon()" style="border-color:#8A6A16;color:#8A6A16;">진단용 추출(익명화)</button>
   </div>
   <div class="btnrow" style="margin-top:8px;">
-    <label><input type="checkbox" id="watch" onclick="toggleWatch()"> <b>자동 감지</b> — 2초마다 클립보드를 확인해 특허넷 [내보내기] 내용이 오면 자동 정리</label>
+    <label><input type="checkbox" id="watch" onclick="toggleWatch()"> <b>자동 감지</b> — 2초마다 클립보드를 확인해 매크로(M2)·[내보내기] 결과가 오면 자동 정리 <b>(열면 자동으로 켜짐)</b></label>
     &nbsp;&nbsp;
     <label><input type="checkbox" id="accum" checked> 기존 목록에 누적 (하루치 모아보기)</label>
   </div>
   <div class="hint" id="clipMsg" style="margin-top:6px;"></div>
 </div>
+
+<div id="autoBox" style="display:none;background:#E4F3E8;border:2px solid #1E6E3C;color:#14532B;padding:11px 13px;margin-bottom:18px;"></div>
 
 <div class="summary" id="summary">
   <h2>전체 요약</h2>
@@ -922,6 +924,32 @@ var caseSigs = {};
 var clipSig = '';
 var watchTimer = null;
 
+function tally(){
+  var r = { n:allCases.length, star:0, op:0, reg:0, rej:0 }, i, j, k, L;
+  for(i=0;i<allCases.length;i++){
+    var c = allCases[i];
+    var ls = [c.priorReg||[], c.priorApp||[], c.ownPrior||[]];
+    for(k=0;k<ls.length;k++){
+      L = ls[k];
+      for(j=0;j<L.length;j++){ if(L[j].bstar) r.star++; if(L[j].opinion) r.op++; }
+    }
+    if(c.finalCall === '등록결정') r.reg++;
+    else if(c.finalCall === '거절결정') r.rej++;
+  }
+  return r;
+}
+function announce(added, hh){
+  var r = tally();
+  var b = document.getElementById('autoBox');
+  if(b){
+    b.style.display = 'block';
+    b.innerHTML = '\u2713 [' + hh + '] 자동 반영 완료 — 이번에 <b>' + added + '건</b> 추가 · 현재 총 <b>' + r.n + '건</b>' +
+      '<div style="font-weight:normal;margin-top:5px;color:#33445A;">' +
+      '\u2605 유사 표시 선행건 <b>' + r.star + '</b>건 · 심사관 의견 기재 <b>' + r.op + '</b>건 · ' +
+      '등록결정 ' + r.reg + ' / 거절결정 ' + r.rej + '</div>';
+  }
+  try { document.title = '(' + r.n + '건) 선행상표 심사점검표 정리 뷰어'; } catch(e){}
+}
 function msg(s){
   var m = document.getElementById('clipMsg');
   if(m) m.innerHTML = s;
@@ -986,6 +1014,7 @@ function importText(raw, silent){
   var now = new Date();
   var hh = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
   msg('[' + hh + '] ' + added + '건 추가됨 · 현재 총 ' + allCases.length + '건 표시 중');
+  if(added) announce(added, hh);
   if(added && !silent) document.getElementById('summary').scrollIntoView(true);
   return added;
 }
@@ -1045,7 +1074,9 @@ function toggleWatch(){
       var sig = t.length + '|' + t.substring(0,80);
       if(sig === clipSig) return;          // 이미 처리한 내용
       clipSig = sig;
-      if(!APPRE.test(decodeU(t))) return; // 점검표 덤프가 아니면 무시
+      var dt = decodeU(t);
+      /* 점검표 덤프 판별: 출원번호 표기 또는 매크로/셀프캡처 표식 */
+      if(!APPRE.test(dt) && dt.indexOf('[팝업캡처]') < 0 && dt.indexOf('[구분선]') < 0) return;
       importText(t, true);
     }, 2000);
     msg('자동 감지 작동 중 — 특허넷에서 [내보내기]만 누르면 이 화면에 자동 반영됩니다. (권한 확인창이 뜨면 "허용"을 누르세요. 확인창이 반복되면 자동 감지를 끄고 버튼 방식을 이용하세요.)');
@@ -1060,8 +1091,21 @@ function resetAll(){
   document.getElementById('src').value = '';
   document.getElementById('summary').style.display = 'none';
   document.getElementById('cards').innerHTML = '';
+  var ab = document.getElementById('autoBox');
+  if(ab){ ab.style.display = 'none'; ab.innerHTML = ''; }
+  try { document.title = '선행상표 심사점검표 정리 뷰어'; } catch(e){}
   msg('');
 }
+(function(){
+  /* 자동 감지 자동 시작: 뷰어를 열어두기만 하면 매크로 결과가 저절로 반영된다.
+     클립보드를 못 읽는 브라우저에서는 조용히 건너뜀 (체크박스로 수동 조작 가능) */
+  try {
+    if(readClip() !== null){
+      var w = document.getElementById('watch');
+      if(w && !w.checked){ w.checked = true; toggleWatch(); }
+    }
+  } catch(e){}
+})();
 (function(){var el=document.getElementById('dmode');if(el)el.innerHTML=' · 문서모드: '+(document.documentMode||'구형(quirks)');})();
 </script>
 </body>
