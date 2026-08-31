@@ -2,7 +2,8 @@
 // 모든 모듈이 공유하는 저장 키·기본값·모듈 정의를 한 곳에 모은다.
 
 // LLM 기본값 — 내부망 OpenWebUI 기준. 외부망 개발 시 Ollama(http://localhost:11434/v1, apiStyle "openai")로 전환.
-export const DEFAULT_BASE_URL = "";
+// 내부망 LLM 주소는 K-SUITE와 동일하게 고정 (환경이 다르면 설정에서 수정 가능).
+export const DEFAULT_BASE_URL = "https://llm.moip.go.kr";
 export const DEFAULT_MODEL = "gemma4-26b-moe";
 export const DEFAULT_API_STYLE = "openwebui"; // "openwebui" | "openai"
 export const LLM_REQUEST_TIMEOUT_MS = 180000;
