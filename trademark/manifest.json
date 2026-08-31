@@ -8,8 +8,7 @@
     "default_title": "TRADEMARK 모듈 런처"
   },
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "side_panel": {
     "default_path": "sidepanel/sidepanel.html"
