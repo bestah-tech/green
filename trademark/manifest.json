@@ -13,6 +13,13 @@
   "side_panel": {
     "default_path": "sidepanel/sidepanel.html"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://*.kipris.or.kr/*", "http://*.kipris.or.kr/*"],
+      "js": ["content/kipris-content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "permissions": [
     "storage",
     "sidePanel",

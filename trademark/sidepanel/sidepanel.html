@@ -3,35 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <title>TRADEMARK 검색 에이전트</title>
-  <style>
-    /* 1단계 자리표시 화면 — 모듈 3은 5단계에서 구현 */
-    body {
-      margin: 0;
-      padding: 16px;
-      font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
-      font-size: 13px;
-      color: #1d2430;
-      background: #f4f6f9;
-    }
-    h1 { font-size: 15px; margin: 0 0 8px; }
-    .card {
-      background: #fff;
-      border: 1px solid #d9dee6;
-      border-radius: 10px;
-      padding: 12px;
-      line-height: 1.6;
-    }
-    .warn { color: #a05a00; }
-    #tabInfo { margin-top: 8px; font-size: 12px; color: #67707e; word-break: break-all; }
-  </style>
+  <link rel="stylesheet" href="sidepanel.css" />
 </head>
 <body>
-  <h1>검색 에이전트 (모듈 3)</h1>
-  <div class="card">
-    <p class="warn">5단계에서 구현 예정입니다.</p>
-    <p>상표검색시스템 탭에서만 동작하며, 다른 탭에서는 '탭 조건 미충족'으로 표시됩니다.</p>
-    <div id="tabInfo"></div>
-  </div>
+  <header class="sp-header">
+    <h1>검색 에이전트 <span class="sp-sub">모듈 3</span></h1>
+    <span id="tabBadge" class="tab-badge">탭 확인 중...</span>
+  </header>
+
+  <p class="disclaimer">점수는 검토 우선순위용 보조 지표입니다. 유사 여부의 결론이 아닙니다.</p>
+
+  <section class="card">
+    <h2>출원건</h2>
+    <select id="spCaseSelect"></select>
+    <p id="spCaseState" class="status"></p>
+  </section>
+
+  <section class="card">
+    <h2>① 검색결과 수집</h2>
+    <p class="help">KIPRIS(상표검색시스템) 탭에서 검색을 실행해 결과가 화면에 보이는 상태에서 아래 버튼을 누르세요.</p>
+    <div class="row">
+      <button id="collectBtn" class="btn primary" type="button">현재 화면 검색결과 수집</button>
+      <span id="collectStatus" class="status"></span>
+    </div>
+    <div id="collectedList" class="collected-list"></div>
+    <div class="row hidden" id="saveRow">
+      <button id="saveCandidatesBtn" class="btn" type="button">체크한 항목을 후보로 저장 (P번호 부여)</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>② 저장된 후보 · 유사도 평가</h2>
+    <p class="help">평가는 승인 1(출원상표 분석 확정)이 된 출원건에서만 실행할 수 있습니다.</p>
+    <div id="candidateList" class="candidate-list">저장된 후보가 없습니다.</div>
+  </section>
+
+  <section class="card">
+    <h2>화면 구조 캡처 <span class="sp-sub">개발용</span></h2>
+    <p class="help">검색결과 화면의 HTML 구조를 캡처합니다. 복사해서 개발자(Claude)에게 전달하면 수집 정확도를 높이는 셀렉터를 만들 수 있습니다.</p>
+    <div class="row">
+      <button id="captureBtn" class="btn" type="button">구조 캡처</button>
+      <button id="copyCaptureBtn" class="btn hidden" type="button">복사</button>
+      <span id="captureStatus" class="status"></span>
+    </div>
+    <textarea id="captureOut" class="hidden" rows="8" readonly></textarea>
+  </section>
+
   <script type="module" src="sidepanel.js"></script>
 </body>
 </html>

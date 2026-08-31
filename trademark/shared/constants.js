@@ -37,11 +37,10 @@ export const MODULES = Object.freeze([
   {
     id: "search-agent",
     title: "검색 에이전트",
-    description: "모듈 3 — 상표검색시스템 탭 사이드패널에서 반복 검색·1차 스코어링.",
+    description: "모듈 3 — 검색시스템 탭 사이드패널에서 검색결과 수집·후보 저장·유사도 평가.",
     launchType: "sidepanel",
     path: "sidepanel/sidepanel.html",
-    ready: false,
-    readyNote: "5단계에서 구현 예정"
+    ready: true
   },
   {
     id: "review",
