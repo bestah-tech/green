@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>TRADEMARK 검색 에이전트</title>
+  <style>
+    /* 1단계 자리표시 화면 — 모듈 3은 5단계에서 구현 */
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+      font-size: 13px;
+      color: #1d2430;
+      background: #f4f6f9;
+    }
+    h1 { font-size: 15px; margin: 0 0 8px; }
+    .card {
+      background: #fff;
+      border: 1px solid #d9dee6;
+      border-radius: 10px;
+      padding: 12px;
+      line-height: 1.6;
+    }
+    .warn { color: #a05a00; }
+    #tabInfo { margin-top: 8px; font-size: 12px; color: #67707e; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>검색 에이전트 (모듈 3)</h1>
+  <div class="card">
+    <p class="warn">5단계에서 구현 예정입니다.</p>
+    <p>상표검색시스템 탭에서만 동작하며, 다른 탭에서는 '탭 조건 미충족'으로 표시됩니다.</p>
+    <div id="tabInfo"></div>
+  </div>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

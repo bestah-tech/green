@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TRADEMARK 통합 대시보드</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <h1>TRADEMARK</h1>
+      <span class="brand-sub">통합 대시보드</span>
+    </div>
+    <nav class="module-nav">
+      <button class="nav-btn active" data-view="home" type="button">홈</button>
+      <button class="nav-btn" data-view="analysis" type="button">1. 출원상표 분석</button>
+      <button class="nav-btn" data-view="query" type="button" disabled title="4단계에서 구현 예정">2. 검색식 작성</button>
+      <button class="nav-btn" data-view="review" type="button" disabled title="6단계에서 구현 예정">4. 유사판단 리뷰</button>
+      <button class="nav-btn" data-view="notice" type="button" disabled title="3단계(MVP)에서 구현 예정">5. 통지서 작성</button>
+    </nav>
+    <div class="header-right">
+      <span id="connBadge" class="conn-badge">연결 확인 전</span>
+    </div>
+  </header>
+
+  <p class="disclaimer">이 도구는 심사를 대신하지 않습니다. 점수와 판정은 검토 우선순위용 후보일 뿐이며, 결론은 심사관이 내립니다.</p>
+
+  <!-- 홈: 설정 상태 + 연결 테스트 + 출원건 관리 -->
+  <main id="view-home" class="view">
+    <section class="panel">
+      <h2>연결 상태</h2>
+      <div id="settingsSummary" class="settings-summary"></div>
+      <div class="row">
+        <button id="testConnBtn" class="btn primary" type="button">연결 테스트 (모델 목록 조회)</button>
+        <span id="connStatus" class="status"></span>
+      </div>
+      <ul id="modelList" class="model-list"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>출원건 관리</h2>
+      <p class="panel-help">출원번호 기준으로 출원건을 만들고, 모든 산출물은 출원건 아래에 버전으로 쌓입니다. 데이터는 이 브라우저의 IndexedDB에만 저장됩니다.</p>
+      <div class="row">
+        <input id="newCaseId" type="text" placeholder="출원번호 (예: 40-2026-0012345)" autocomplete="off" />
+        <input id="newCaseTitle" type="text" placeholder="표장명 등 메모 (선택)" autocomplete="off" />
+        <button id="createCaseBtn" class="btn primary" type="button">출원건 생성</button>
+      </div>
+      <p id="caseStatus" class="status"></p>
+      <table class="case-table">
+        <thead>
+          <tr><th>출원번호</th><th>메모</th><th>승인 1</th><th>승인 2</th><th>수정일</th><th></th></tr>
+        </thead>
+        <tbody id="caseTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- 모듈 1 자리: 2단계에서 구현 -->
+  <main id="view-analysis" class="view hidden">
+    <section class="panel">
+      <h2>모듈 1 — 출원상표 분석</h2>
+      <p class="panel-help">2단계에서 구현 예정입니다. 표장 구성 분석 → 외국어 의미·칭호 산출 → 지정상품 정리·유사군코드 부여 → 승인 1(버전 고정) 순서로 동작하게 됩니다.</p>
+    </section>
+  </main>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

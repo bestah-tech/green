@@ -1,0 +1,22 @@
+{
+  "_설명": "상표검색시스템 검색식 연산자 문법 정의. 검색식 조립·검증(모듈 2)은 이 파일 기준으로 동작하며, 내부망 반입 시 내부망 문법으로 교체한다. 현재는 KIPRIS 기준 초안.",
+  "system": "kipris-public-draft",
+  "operators": {
+    "and": "*",
+    "or": "+",
+    "not": "!",
+    "wildcard": "?",
+    "phrase": "\"\""
+  },
+  "fields": {
+    "_설명": "필드 검색 접미사 예: 표장명.TN, 유사군코드.SC — 내부망 문법 확인 후 확정",
+    "markName": "TN",
+    "similarGroupCode": "SC",
+    "applicant": "AP",
+    "classCode": "CL"
+  },
+  "limits": {
+    "maxQueryLength": 500,
+    "maxOrTerms": 30
+  }
+}

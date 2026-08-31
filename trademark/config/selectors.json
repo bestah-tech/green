@@ -1,0 +1,29 @@
+{
+  "_설명": "상표검색시스템 검색결과 DOM 셀렉터. 화면 구조가 바뀌면 코드 수정 없이 이 파일만 교체한다. 현재는 KIPRIS 공개 사이트(kipris.or.kr) 기준 초안이며, 내부망 반입 시 내부망 검색시스템 구조로 교체 예정.",
+  "system": "kipris-public-draft",
+  "urlPatterns": [
+    "kipris.or.kr"
+  ],
+  "search": {
+    "_설명": "검색 입력·실행 요소 (5단계 구현 시 실제 화면 기준으로 확정)",
+    "queryInput": "#queryText",
+    "searchButton": ".btn-search"
+  },
+  "resultList": {
+    "_설명": "검색결과 목록에서 후보별 필드를 뽑는 셀렉터 (5단계 구현 시 확정)",
+    "container": ".search-result-list",
+    "item": ".search-result-item",
+    "fields": {
+      "applicationNumber": ".app-number",
+      "markName": ".mark-name",
+      "applicant": ".applicant",
+      "status": ".status",
+      "goodsClasses": ".goods-classes",
+      "imageUrl": "img.mark-image"
+    }
+  },
+  "pagination": {
+    "nextButton": ".pagination .next",
+    "totalCount": ".result-total-count"
+  }
+}

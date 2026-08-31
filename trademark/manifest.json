@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "TRADEMARK",
+  "version": "0.1.0",
+  "description": "상표 심사지원 도구 — 출원상표 분석 · 검색식 작성 · 검색 에이전트 · 유사판단 리뷰 · 통지서 작성 (심사 결론은 심사관이 내립니다)",
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "TRADEMARK 모듈 런처"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "tabs",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["config/*.json", "data/*.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

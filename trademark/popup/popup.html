@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>TRADEMARK</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>TRADEMARK</h1>
+      <p class="tagline">상표 심사지원 도구 · 판단은 심사관이 내립니다</p>
+    </div>
+    <button id="settingsToggleBtn" class="btn ghost" type="button">공통 설정</button>
+  </header>
+
+  <p id="gateHint" class="gate-hint"></p>
+
+  <main id="moduleGrid" class="module-grid"></main>
+
+  <p id="launchStatus" class="status"></p>
+
+  <!-- 공통 설정 시트: API 주소·키·기본 모델을 한 번 저장하면 전 모듈이 공유 -->
+  <section id="settingsSheet" class="settings-sheet hidden">
+    <div class="settings-backdrop" id="settingsBackdrop"></div>
+    <div class="settings-panel">
+      <div class="settings-head">
+        <h2>공통 설정</h2>
+        <button id="settingsCloseBtn" class="btn ghost" type="button">닫기</button>
+      </div>
+
+      <div class="field">
+        <label for="baseUrlInput">API Base URL</label>
+        <input id="baseUrlInput" type="url" placeholder="내부망: https://... / 외부망 Ollama: http://localhost:11434/v1" autocomplete="off" />
+        <p class="field-help">OpenWebUI는 주소만, Ollama는 끝에 /v1 을 붙여 입력합니다.</p>
+      </div>
+
+      <div class="field">
+        <label for="apiStyleSelect">API 방식</label>
+        <select id="apiStyleSelect">
+          <option value="openwebui">OpenWebUI (내부망) — /api/chat/completions</option>
+          <option value="openai">OpenAI 호환 (Ollama 등) — /chat/completions</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="apiKeyInput">API Key</label>
+        <input id="apiKeyInput" type="password" placeholder="예: sk-..." autocomplete="off" />
+        <p class="field-help">Ollama 로컬 실행은 아무 값이나 입력해도 됩니다.</p>
+      </div>
+
+      <div class="field">
+        <label for="modelInput">기본 모델</label>
+        <div class="field-control-row">
+          <input id="modelInput" type="text" placeholder="gemma4-26b-moe" autocomplete="off" />
+          <select id="modelSelect" class="hidden"></select>
+          <button id="loadModelsBtn" class="btn ghost" type="button">모델 목록</button>
+        </div>
+        <p id="modelStatus" class="status"></p>
+      </div>
+
+      <div class="field field-inline">
+        <label><input id="mockModeInput" type="checkbox" /> 목(mock) 모드 — LLM 없이 저장된 샘플 응답으로 화면 흐름 확인</label>
+      </div>
+
+      <div class="field field-inline">
+        <label><input id="imageInputCheck" type="checkbox" /> LLM 이미지 입력 사용 (도형 상표 이미지 분석)</label>
+      </div>
+
+      <div class="settings-actions">
+        <button id="saveSettingsBtn" class="btn primary" type="button">저장</button>
+        <span id="settingsStatus" class="status"></span>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
