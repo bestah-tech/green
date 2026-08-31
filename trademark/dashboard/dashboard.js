@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from "../shared/constants.js";
 import { loadSettings } from "../shared/settings.js";
 import { fetchAvailableModels } from "../shared/llm.js";
 import { createCase, listCases, deleteCaseCascade } from "../shared/db.js";
+import { initAnalysis, refreshAnalysisCases } from "./analysis.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -28,6 +29,8 @@ function switchView(view) {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === view);
   });
+  // 분석 화면으로 이동할 때 출원건 목록 최신화
+  if (view === "analysis") void refreshAnalysisCases();
 }
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -145,6 +148,7 @@ async function onCreateCase() {
     el("newCaseTitle").value = "";
     setStatus(el("caseStatus"), `출원건 ${caseId} 을(를) 생성했습니다.`, "ok");
     await renderCaseTable();
+    await refreshAnalysisCases();
   } catch (error) {
     setStatus(el("caseStatus"), `생성 실패: ${error.message}`, "error");
   }
@@ -160,6 +164,7 @@ async function onDeleteCase(caseId) {
     await deleteCaseCascade(caseId);
     setStatus(el("caseStatus"), `출원건 ${caseId} 을(를) 삭제했습니다.`, "ok");
     await renderCaseTable();
+    await refreshAnalysisCases();
   } catch (error) {
     setStatus(el("caseStatus"), `삭제 실패: ${error.message}`, "error");
   }
@@ -171,6 +176,7 @@ async function initialize() {
   state.settings = await loadSettings();
   renderSettingsSummary();
   await renderCaseTable();
+  await initAnalysis();
 
   // URL 해시로 초기 뷰 지정 가능 (#review, #notice 등 — 해당 모듈 구현 후 활성화)
   const hash = location.hash.replace("#", "");
