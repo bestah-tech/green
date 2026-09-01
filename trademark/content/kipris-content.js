@@ -142,7 +142,15 @@
       try {
         var bySel = collectBySelectors(message.selectors);
         var results = bySel.length > 0 ? bySel : collectByHeuristic();
-        sendResponse({ ok: true, results: results, url: location.href });
+        if (results.length === 0) {
+          // 프레임 기반 화면(특허넷)에서는 이 스크립트가 모든 프레임에 떠 있고,
+          // 첫 응답이 채택된다. 빈 프레임은 늦게 답해서 결과 있는 프레임에 양보한다.
+          setTimeout(function () {
+            sendResponse({ ok: true, results: [], url: location.href });
+          }, 400);
+        } else {
+          sendResponse({ ok: true, results: results, url: location.href });
+        }
       } catch (error) {
         sendResponse({ ok: false, error: error.message });
       }

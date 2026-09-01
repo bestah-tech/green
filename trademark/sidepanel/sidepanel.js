@@ -115,11 +115,13 @@ async function renderBriefQueries() {
   const queries = state.searchBrief?.data?.queries || [];
   if (queries.length === 0) {
     list.textContent = "승인 2가 확정되지 않았습니다. 대시보드의 [2. 검색식 작성]에서 확정하세요.";
+    el("exportQueriesBtn").disabled = true;
     return;
   }
   const runs = await getAllByCase("searchRuns", state.caseId);
   const runCount = (query) => runs.filter((r) => r.query === query).length;
 
+  el("exportQueriesBtn").disabled = false;
   list.innerHTML = "";
   queries.forEach((item) => {
     const div = document.createElement("div");
@@ -161,11 +163,34 @@ async function renderBriefQueries() {
     head.appendChild(copyBtn);
     const query = document.createElement("div");
     query.className = "bq-query";
-    query.textContent = item.query;
+    query.textContent = item.query + (item.classCd ? `\nClassCd: ${item.classCd}` : "");
     div.appendChild(head);
     div.appendChild(query);
     list.appendChild(div);
   });
+}
+
+// 승인 2 검색식을 IE 자동 검색 스크립트(tools/search.vbs)가 읽는 TmQueries.txt 로 내보낸다.
+// 형식: 한 줄에 라벨<TAB>검색식(TmName)<TAB>유사군코드(ClassCd). # 으로 시작하는 줄은 주석.
+function exportQueries() {
+  const queries = state.searchBrief?.data?.queries || [];
+  if (queries.length === 0) return;
+  const lines = [
+    "# TRADEMARK 검색식 내보내기 — tools/search.vbs 와 같은 폴더에 두고 실행하세요.",
+    `# 출원건: ${state.caseId}  (내보낸 시각: ${new Date().toISOString()})`,
+    "# 형식: 라벨<TAB>TmName<TAB>ClassCd"
+  ];
+  queries.forEach((q) => {
+    lines.push([q.label, q.query, q.classCd || ""].join("\t"));
+  });
+  // ﻿(BOM): 메모장·VBScript(ADODB.Stream)가 UTF-8 임을 인식하도록 붙인다
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "TmQueries.txt";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---------- content script 통신 ----------
@@ -574,6 +599,7 @@ async function initialize() {
   });
   el("collectBtn").addEventListener("click", () => void collectResults());
   el("pasteResultsBtn").addEventListener("click", () => collectFromPaste());
+  el("exportQueriesBtn").addEventListener("click", () => exportQueries());
   el("saveCandidatesBtn").addEventListener("click", () => void saveCheckedCandidates());
   el("captureBtn").addEventListener("click", () => void captureStructure());
   el("copyCaptureBtn").addEventListener("click", async () => {

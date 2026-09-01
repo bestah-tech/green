@@ -1,19 +1,26 @@
 {
-  "_설명": "상표검색시스템 검색식 연산자 문법 정의. 검색식 조립·검증(모듈 2)은 이 파일 기준으로 동작하며, 내부망 반입 시 내부망 문법으로 교체한다. 현재는 KIPRIS 기준 초안.",
-  "system": "kipris-public-draft",
+  "_설명": "상표검색시스템(내부망 kiponet3/ts 스마트검색) 검색식 문법. 심사점검표 화면 HTML에서 실측한 실제 검색 URL의 TmName 파라미터 예시로 확인함 (예: 오성+오승 / (자몽+jamong)&(나라+nara) / /CURO+/쿠로 / w?n/ ). 모듈 2 조립·검증과 VBS 자동 검색이 이 파일 기준으로 동작한다.",
+  "system": "kiponet3-ts",
   "operators": {
-    "and": "*",
     "or": "+",
-    "not": "!",
+    "and": "&",
     "wildcard": "?",
-    "phrase": "\"\""
+    "anchor": "/",
+    "all": "#"
   },
-  "fields": {
-    "_설명": "필드 검색 접미사 예: 표장명.TN, 유사군코드.SC — 내부망 문법 확인 후 확정",
-    "markName": "TN",
-    "similarGroupCode": "SC",
-    "applicant": "AP",
-    "classCode": "CL"
+  "_operators_설명": "or(+): 어느 하나라도 포함. and(&): 그룹 동시 만족, 괄호와 함께 사용 (a+b)&(c+d). wildcard(?): 임의 문자 1자 (w?n). anchor(/): 칭호 경계 고정 — /CURO 는 CURO 로 시작, CURO/ 는 CURO 로 끝. all(#): 전체 대상.",
+  "params": {
+    "_설명": "검색 화면이 실제로 받는 URL 파라미터 이름. 검색식(TmName)과 유사군코드 제한(ClassCd, + 로 연결)은 별개 파라미터다.",
+    "markName": "TmName",
+    "similarGroupCode": "ClassCd",
+    "applicationNumber": "ApplNo"
+  },
+  "searchUrls": {
+    "_설명": "심사점검표의 검색 메뉴가 스마트검색 셸(content_iframe)에 로드하는 실제 URL (심사점검표 HTML 실측). base 는 내부망에서 스마트검색 창 주소창으로 확인 후 필요 시 수정.",
+    "base": "http://kpopds1.kipo.go.kr:8410",
+    "similar": "/ts/search/fgreSrch/mainSimilarSrch.do?f_name=Y905&BtNo=4&SimLevel=1&ClassDv=0&BisEmYn=1&ClSmYn=0",
+    "query": "/ts/search/fgreSrch/mainApplNoSrchRslt.do?f_name=Y347&BisEmYn=1&ClSmYn=0&ClassDv=0",
+    "aiName": "/ts/search/fgreSrch/mainSimilarNmSrchAI.do?f_name=Y347&SimLevel=1&ClassDv=0&ClSmYn=0&aiSmlrNmYN=Y"
   },
   "limits": {
     "maxQueryLength": 500,

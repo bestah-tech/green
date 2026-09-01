@@ -1,8 +1,11 @@
 // 검색식 조립·검증 (모듈 2 레이어 3) [지시서 5. 모듈 2 / K-QUERY layer_3]
 //
-// LLM 이 아니라 코드가 담당한다: 승인 대상 용어·변형 목록과 유사군코드를
-// config/query_syntax.json 의 연산자 문법으로 조립하고, 길이·항 수 제한을 검증한다.
-// 내부망 반입 시 query_syntax.json 만 내부망 문법으로 교체하면 이 코드는 그대로 동작해야 한다.
+// LLM 이 아니라 코드가 담당한다: 승인 대상 용어·변형 목록을
+// config/query_syntax.json 의 내부망 문법(kiponet3-ts)으로 조립하고 검증한다.
+// 내부망 문법 실측 (심사점검표 HTML 의 실제 검색 URL 예시):
+//   TmName=오성+오승 / (자몽+jamong)&(나라+nara) / /CURO+/쿠로 / w?n/
+//   → or "+", and "&", wildcard "?"(1자), anchor "/"(칭호 경계)
+// 유사군코드는 검색식이 아니라 별도 파라미터 ClassCd (+ 로 연결) 로 전달된다.
 
 let syntaxPromise = null;
 
@@ -13,29 +16,10 @@ export async function loadQuerySyntax() {
   return syntaxPromise;
 }
 
-// 검색 항(term) 하나를 문법에 맞게 다듬는다: 공백 포함 시 구문 검색("") 처리
-function formatTerm(syntax, term) {
-  const t = String(term || "").trim();
-  if (!t) return "";
-  const phrase = syntax.operators?.phrase || "";
-  if (/\s/.test(t) && phrase.length >= 2) {
-    const open = phrase[0];
-    const close = phrase[phrase.length - 1];
-    return `${open}${t}${close}`;
-  }
-  return t;
-}
-
-// 필드 접미사 적용: "선라이즈" + markName → "선라이즈.TN" (필드 정의가 없으면 그대로)
-function applyField(syntax, expr, fieldKey) {
-  const suffix = syntax.fields?.[fieldKey];
-  return suffix ? `${expr}.${suffix}` : expr;
-}
-
-// OR 묶음 조립: ["a","b"] → "(a+b)" (1개면 괄호 생략)
+// OR 묶음 조립: ["a","b"] → "(a+b)" (1개면 괄호 생략, 중복 제거)
 function orGroup(syntax, terms) {
   const or = syntax.operators?.or || "+";
-  const formatted = [...new Set(terms.map((t) => formatTerm(syntax, t)).filter(Boolean))];
+  const formatted = [...new Set(terms.map((t) => String(t || "").trim()).filter(Boolean))];
   if (formatted.length === 0) return "";
   if (formatted.length === 1) return formatted[0];
   return `(${formatted.join(or)})`;
@@ -72,56 +56,65 @@ export function validateQuery(syntax, query) {
 // terms:      [{ term, kind, priority }]           — 심사관이 확정한 용어 (kind: 표기|칭호|관념)
 // variations: [{ base, variant, type, include }]   — include 가 true 인 변형만 사용
 // similarGroupCodes: ["G1201", ...]                — 승인 1 지정상품의 유사군코드 (unknown 제외)
-// 반환: [{ label, query, purpose, valid, issues }]
+// 반환: [{ label, query(TmName 검색식), classCd(ClassCd 값, + 연결), purpose, valid, issues }]
 export function buildQueries(syntax, { terms = [], variations = [], similarGroupCodes = [] } = {}) {
-  const and = syntax.operators?.and || "*";
+  const or = syntax.operators?.or || "+";
   const queries = [];
 
   const included = variations.filter((v) => v.include !== false);
   const variantsOf = (base) =>
     included.filter((v) => v.base === base).map((v) => v.variant);
 
-  // ① core 용어별 그룹 검색식: 용어 + 그 변형을 OR 로 묶어 표장명 검색
-  const coreTerms = terms.filter((t) => t.priority === "core");
-  coreTerms.forEach((t) => {
-    const group = orGroup(syntax, [t.term, ...variantsOf(t.term)]);
-    if (!group) return;
-    const query = applyField(syntax, group, "markName");
-    queries.push({
-      label: `핵심 — ${t.term} (${t.kind})`,
-      query,
-      purpose: "core-term",
-      ...validateQuery(syntax, query)
-    });
-  });
-
-  // ② support 용어 그룹 검색식 (있을 때만)
-  terms.filter((t) => t.priority === "support").forEach((t) => {
-    const group = orGroup(syntax, [t.term, ...variantsOf(t.term)]);
-    if (!group) return;
-    const query = applyField(syntax, group, "markName");
-    queries.push({
-      label: `보조 — ${t.term} (${t.kind})`,
-      query,
-      purpose: "support-term",
-      ...validateQuery(syntax, query)
-    });
-  });
-
-  // ③ 결합 검색식: 모든 용어·변형 OR ∧ 유사군코드 OR — 상품 범위를 좁힌 정밀 검색
-  const allTerms = terms.flatMap((t) => [t.term, ...variantsOf(t.term)]);
   const codes = [...new Set(similarGroupCodes.filter((c) => c && c !== "unknown"))];
-  if (allTerms.length > 0 && codes.length > 0) {
-    const termGroup = orGroup(syntax, allTerms);
-    const codeGroup = applyField(syntax, orGroup(syntax, codes), "similarGroupCode");
-    const query = `${applyField(syntax, termGroup, "markName")}${and}${codeGroup}`;
+  const classCd = codes.join(or); // ClassCd 파라미터 값 — 검색식과 별개로 상품 범위를 제한
+
+  const pushGroup = (t, labelPrefix, purpose) => {
+    const query = orGroup(syntax, [t.term, ...variantsOf(t.term)]);
+    if (!query) return;
     queries.push({
-      label: "결합 — 전체 용어 × 유사군코드",
+      label: `${labelPrefix} — ${t.term} (${t.kind})`,
       query,
+      classCd,
+      purpose,
+      ...validateQuery(syntax, query)
+    });
+  };
+
+  // ① core 용어별 그룹 검색식: 용어 + 그 변형을 OR 로 묶는다
+  terms.filter((t) => t.priority === "core").forEach((t) => pushGroup(t, "핵심", "core-term"));
+
+  // ② support 용어 그룹 검색식
+  terms.filter((t) => t.priority === "support").forEach((t) => pushGroup(t, "보조", "support-term"));
+
+  // ③ 결합 검색식: 모든 용어·변형을 한 번에 OR — 넓게 한 번 훑는 용도
+  const allTerms = terms.flatMap((t) => [t.term, ...variantsOf(t.term)]);
+  if (allTerms.length > 1) {
+    const query = orGroup(syntax, allTerms);
+    queries.push({
+      label: "결합 — 전체 용어",
+      query,
+      classCd,
       purpose: "combined",
       ...validateQuery(syntax, query)
     });
   }
 
   return queries;
+}
+
+// 검색 URL 조립 — 크롬에서 검색시스템이 열리면 이 URL 로 바로 검색 실행 가능.
+// kind: "similar"(유사질의어) | "query"(질의어) | "aiName"(AI 호칭)
+export function buildSearchUrl(syntax, { kind = "similar", tmName, classCd = "", applNo = "" } = {}) {
+  const urls = syntax.searchUrls || {};
+  const path = urls[kind] || urls.similar;
+  if (!path || !tmName) return "";
+  const base = (urls.base || "").replace(/\/+$/, "");
+  const params = syntax.params || {};
+  const parts = [
+    `${params.markName || "TmName"}=${encodeURIComponent(tmName)}`,
+    `${params.similarGroupCode || "ClassCd"}=${encodeURIComponent(classCd)}`,
+    `${params.applicationNumber || "ApplNo"}=${encodeURIComponent(String(applNo).replace(/-/g, ""))}`
+  ];
+  const sep = path.includes("?") ? "&" : "?";
+  return `${base}${path}${sep}${parts.join("&")}`;
 }

@@ -18,6 +18,15 @@
       "matches": ["https://*.kipris.or.kr/*", "http://*.kipris.or.kr/*"],
       "js": ["content/kipris-content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://kpopds1.kipo.go.kr/*", "https://kpopds1.kipo.go.kr/*",
+        "http://kpoap.kipo.go.kr/*", "https://kpoap.kipo.go.kr/*"
+      ],
+      "js": ["content/kipris-content.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
     }
   ],
   "permissions": [

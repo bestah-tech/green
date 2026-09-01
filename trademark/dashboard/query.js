@@ -360,6 +360,12 @@ function renderQueries() {
 
     div.appendChild(head);
     div.appendChild(input);
+    if (item.classCd) {
+      const codeLine = document.createElement("div");
+      codeLine.className = "query-codes";
+      codeLine.textContent = `유사군코드 제한 (ClassCd): ${item.classCd}`;
+      div.appendChild(codeLine);
+    }
     div.appendChild(issues);
     list.appendChild(div);
   });
@@ -391,7 +397,7 @@ async function approveBrief() {
       terms,
       variations: readTable("variations"),
       similarGroupCodes: collectSimilarGroupCodes(),
-      queries: queries.map(({ label, query, purpose, valid }) => ({ label, query, purpose, valid })),
+      queries: queries.map(({ label, query, classCd, purpose, valid }) => ({ label, query, classCd, purpose, valid })),
       syntaxSystem: state.syntax?.system || null
     };
     const version = await addVersion("searchBriefs", state.caseId, data, {
