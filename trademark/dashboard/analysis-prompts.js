@@ -104,6 +104,28 @@ export const GOODS_NORMALIZE = {
   }
 };
 
+// 상세 화면 붙여넣기에서 필드 추출 (IE 전용 심사시스템 대응 — 화면 전체 복사 텍스트를 파싱)
+export const DETAIL_EXTRACT = {
+  promptKey: "detail_extract",
+  role: [
+    "너는 대한민국 상표심사관을 보조하는 분석 도구다.",
+    "심사시스템 화면을 통째로 복사한 지저분한 텍스트에서 출원상표 정보를 추출한다.",
+    "markText: 출원상표의 표장 문자(상표명). 화면의 메뉴·버튼·안내문은 표장이 아니다.",
+    "goodsLines: 지정상품 목록. 원문 표기 그대로, 류·유사군코드가 붙어 있으면 함께 남긴다. 한 상품(또는 류 묶음)당 한 줄.",
+    "figureNote: 도형 요소에 대한 설명이 텍스트에 있으면 옮기고, 없으면 null.",
+    "찾을 수 없는 항목은 빈 문자열/빈 배열/null 로 남기고 지어내지 마라."
+  ].join("\n"),
+  schema: {
+    type: "object",
+    required: ["markText", "goodsLines"],
+    properties: {
+      markText: { type: "string" },
+      goodsLines: { type: "array", items: { type: "string" } },
+      figureNote: { type: ["string", "null"] }
+    }
+  }
+};
+
 // 목 모드용 샘플 응답 — LLM 없이 화면 흐름 확인 [지시서 7]
 export const MOCK_SAMPLES = {
   mark_structure: {

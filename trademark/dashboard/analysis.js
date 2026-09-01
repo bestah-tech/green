@@ -10,7 +10,8 @@ import { loadSettings } from "../shared/settings.js";
 import { callJson, buildImageContent, chunkArray } from "../shared/llm.js";
 import { listCases, get, touchCase, addVersion, getAllByCase, setMockResponse, getMockResponse } from "../shared/db.js";
 import { loadSimilarGroupTable, matchSimilarGroupCode } from "../shared/similar-groups.js";
-import { MARK_STRUCTURE, FOREIGN_MEANING, GOODS_NORMALIZE, MOCK_SAMPLES } from "./analysis-prompts.js";
+import { MARK_STRUCTURE, FOREIGN_MEANING, GOODS_NORMALIZE, DETAIL_EXTRACT, MOCK_SAMPLES } from "./analysis-prompts.js";
+import { createCase } from "../shared/db.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -140,6 +141,68 @@ export function parseGoodsInput(text) {
         });
     });
   return items;
+}
+
+// ---------- 붙여넣기로 자동 채우기 (IE 전용 심사시스템 대응) ----------
+// IE 화면에서 Ctrl+A → Ctrl+C 한 전체 텍스트에서 출원번호(코드)·표장·지정상품(LLM)을 추출해 입력칸을 채운다.
+
+const PASTE_APP_NO_RE = /\b(4[0-5])[-\s]?(\d{4})[-\s]?(\d{7})\b/;
+
+async function fillFromPaste() {
+  const pasted = el("anPasteText").value.trim();
+  const status = el("anPasteStatus");
+  if (!pasted) {
+    setStatus(status, "붙여넣은 내용이 없습니다.", "error");
+    return;
+  }
+  el("anPasteBtn").disabled = true;
+  setStatus(status, "추출 중...");
+  try {
+    // 출원번호는 패턴이 명확하므로 코드가 추출
+    const appNoMatch = pasted.match(PASTE_APP_NO_RE);
+    const appNo = appNoMatch ? `${appNoMatch[1]}-${appNoMatch[2]}-${appNoMatch[3]}` : "";
+
+    // 표장·지정상품·도형 설명은 LLM이 추출 (긴 화면은 앞뒤 중요부만 사용)
+    const clipped = pasted.length > 12000 ? pasted.slice(0, 12000) : pasted;
+    const result = await callJson({
+      promptKey: DETAIL_EXTRACT.promptKey,
+      role: DETAIL_EXTRACT.role,
+      schema: DETAIL_EXTRACT.schema,
+      userContent: "심사시스템 화면 복사 텍스트:\n" + clipped
+    });
+    if (!result.ok) throw new Error(result.errors.join(" / "));
+
+    // 출원번호로 출원건 자동 생성·선택
+    if (appNo) {
+      const existing = await get("cases", appNo);
+      if (!existing) {
+        await createCase({ caseId: appNo, title: result.data.markText || "" });
+      }
+      state.caseId = appNo;
+      await chrome.storage.local.set({ [STORAGE_KEYS.ACTIVE_CASE_ID]: appNo });
+      await refreshAnalysisCases();
+    }
+    if (result.data.markText) el("anMarkText").value = result.data.markText;
+    if (result.data.figureNote) el("anFigureText").value = result.data.figureNote;
+    if (result.data.goodsLines?.length) el("anGoodsText").value = result.data.goodsLines.join("\n");
+
+    const filled = [
+      appNo ? `출원번호 ${appNo}` : null,
+      result.data.markText ? `표장 "${result.data.markText}"` : null,
+      result.data.goodsLines?.length ? `지정상품 ${result.data.goodsLines.length}줄` : null
+    ].filter(Boolean);
+    setStatus(
+      status,
+      filled.length > 0
+        ? `채움: ${filled.join(", ")} — 내용을 확인·수정한 뒤 분석을 실행하세요. (표장 이미지는 파일로 직접 첨부)`
+        : "추출된 항목이 없습니다. 상세 화면 전체를 복사했는지 확인해 주세요.",
+      filled.length > 0 ? "ok" : "warn"
+    );
+  } catch (error) {
+    setStatus(status, `추출 실패: ${error.message}`, "error");
+  } finally {
+    el("anPasteBtn").disabled = false;
+  }
 }
 
 // ---------- 목 모드 샘플 자동 등록 ----------
@@ -555,6 +618,7 @@ export async function initAnalysis() {
   if (!state.settings.imageInput) el("anImageField").classList.add("hidden");
 
   el("anCaseSelect").addEventListener("change", () => void onCaseChange());
+  el("anPasteBtn").addEventListener("click", () => void fillFromPaste());
   el("anRunBtn").addEventListener("click", () => void runAnalysis());
   el("anApproveBtn").addEventListener("click", () => void approveVersion());
   el("anMarkImage").addEventListener("change", onImageSelected);
