@@ -206,6 +206,14 @@
         <label><input id="oaEvidenceCoexistChk" type="checkbox" /> 선등록 다수공존 확인됨 (유형 D에 필요)</label>
         <textarea id="oaEvidenceCoexist" rows="2" class="hidden" placeholder="확인된 선등록상표 메모"></textarea>
       </div>
+      <div class="field">
+        <label>실제 사례 코퍼스 (원문모음 txt) <span class="h-note">— 등록하면 닮은 사례를 앵커로 쓰고, 생성 문구가 코퍼스 표현에서 벗어나면 잡아냅니다</span></label>
+        <div class="row">
+          <input id="oaCorpusFile" type="file" accept=".txt,text/plain" />
+          <button id="oaCorpusBtn" class="btn" type="button">코퍼스 등록</button>
+          <span id="oaCorpusStatus" class="status"></span>
+        </div>
+      </div>
       <div class="row">
         <button id="oaAnalyzeBtn" class="btn primary" type="button">1단계 — 심사 판단 실행</button>
         <button id="oaDraftBtn" class="btn primary" type="button" disabled>2단계 — 문구 생성</button>

@@ -18,7 +18,7 @@
 //   counters       ID 채번용 { id: `${caseId}:${prefix}`, value }
 
 const DB_NAME = "trademark-suite";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // v2: corpus33 (33조 의통서 원문 코퍼스) 추가
 
 const STORES = [
   { name: "cases", options: { keyPath: "id" }, indexes: [] },
@@ -32,7 +32,8 @@ const STORES = [
   { name: "phraseAssets", options: { keyPath: "id" }, indexes: [] },
   { name: "templates", options: { keyPath: "id" }, indexes: [] },
   { name: "mockResponses", options: { keyPath: "id" }, indexes: [] },
-  { name: "counters", options: { keyPath: "id" }, indexes: [] }
+  { name: "counters", options: { keyPath: "id" }, indexes: [] },
+  { name: "corpus33", options: { keyPath: "id" }, indexes: [] }
 ];
 
 let dbPromise = null;

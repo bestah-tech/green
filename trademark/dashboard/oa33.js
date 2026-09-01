@@ -8,11 +8,15 @@
 
 import { callJson, chat } from "../shared/llm.js";
 import { loadSettings } from "../shared/settings.js";
+import { getAll, put, remove } from "../shared/db.js";
 import {
   TEMPLATES, PHRASEBANK, QUALITY_VOCAB,
   assembleGroundsTitle, ruleGrounds,
   FORBIDDEN_PATTERNS, UNVERIFIED_CLAIM_PATTERNS, buildClosing
 } from "./oa33-data.js";
+import {
+  parseCorpusText, retrieveCandidates, buildCorpusNgrams, fidelityReport
+} from "./oa33-corpus.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -23,8 +27,103 @@ const state = {
   autoDefaults: [],       // 자동 채택된 열린 질문 기본값
   ruleWarning: "",
   finalText: "",
-  flags: []               // { severity: "필수확인"|"확인", text }
+  flags: [],              // { severity: "필수확인"|"확인", text }
+  corpusRecords: null,    // IndexedDB 캐시
+  anchors: []             // 이번 생성에 사용한 앵커 사례
 };
+
+// ---------- 코퍼스 등록·로드 [SPEC §1-2] ----------
+
+async function loadCorpus() {
+  if (!state.corpusRecords) {
+    state.corpusRecords = await getAll("corpus33");
+  }
+  return state.corpusRecords;
+}
+
+async function refreshCorpusStatus() {
+  const records = await loadCorpus();
+  const target = el("oaCorpusStatus");
+  if (records.length > 0) {
+    target.textContent = `코퍼스 ${records.length}건 등록됨`;
+    target.className = "status ok";
+  } else {
+    target.textContent = "코퍼스 미등록 — 템플릿 골격만 사용합니다";
+    target.className = "status warn";
+  }
+}
+
+async function importCorpus() {
+  const file = el("oaCorpusFile").files?.[0];
+  if (!file) {
+    el("oaCorpusStatus").textContent = "원문모음 txt 파일을 먼저 선택해 주세요.";
+    el("oaCorpusStatus").className = "status error";
+    return;
+  }
+  try {
+    const text = await file.text();
+    const records = parseCorpusText(text);
+    if (records.length < 10) throw new Error(`레코드가 ${records.length}건뿐입니다. 파일 형식을 확인해 주세요.`);
+    // 재등록 시 이전 데이터 정리 후 새로 저장
+    const existing = await getAll("corpus33");
+    for (const old of existing) await remove("corpus33", old.id);
+    for (const record of records) await put("corpus33", record);
+    state.corpusRecords = records;
+    await refreshCorpusStatus();
+  } catch (error) {
+    el("oaCorpusStatus").textContent = `등록 실패: ${error.message}`;
+    el("oaCorpusStatus").className = "status error";
+  }
+}
+
+// ---------- 앵커 선택 [SPEC §7-4] ----------
+
+const ANCHOR_SCHEMA = {
+  type: "array",
+  minItems: 1,
+  items: {
+    type: "object",
+    required: ["corpus_id", "why", "borrow"],
+    properties: {
+      corpus_id: { type: "integer" },
+      why: { type: "string" },
+      borrow: { type: "array", items: { type: "string" } }
+    }
+  }
+};
+
+async function selectAnchors(candidates) {
+  const userContent = [
+    "지금은 앵커 선택 단계입니다. 아래 후보 사례 중 이 사안과 **논증 구조**가 가장 닮은 사례 2~3건을 고르십시오.",
+    "닮음의 기준은 표장의 겉모습이 아니라: 구성 부분의 종류 조합, 조항 조합, 전체 관념 도출 방식(직감형/부분 합산형), 결합 판단 표현, 마무리 형식입니다.",
+    "각 앵커마다 corpus_id, 닮은 이유(why), 이 사례에서 가져올 구절(borrow — 본문에서 그대로 인용)을 명시합니다.",
+    "",
+    "## 판단 노트",
+    JSON.stringify({
+      components: state.analysis.components,
+      overall_concept: state.analysis.overall_concept,
+      quality_types: state.analysis.quality_types,
+      ground: state.analysis.ground
+    }, null, 2),
+    "",
+    "## 후보 사례",
+    ...candidates.map((r) => `[id ${r.id}] (${r.header || "헤더 없음"})\n${r.body.slice(0, 600)}`)
+  ].join("\n");
+
+  const result = await callJson({
+    promptKey: "oa33_anchor",
+    role: COMMON_SYSTEM,
+    schema: ANCHOR_SCHEMA,
+    userContent,
+    temperature: 0.2
+  });
+  if (!result.ok) return [];
+  const byId = new Map(candidates.map((r) => [r.id, r]));
+  return result.data
+    .filter((a) => byId.has(a.corpus_id))
+    .slice(0, 3)
+    .map((a) => ({ ...a, record: byId.get(a.corpus_id) }));
+}
 
 function setStatus(text, tone = "") {
   const target = el("oaStatus");
@@ -239,6 +338,15 @@ function buildDraftPrompt() {
   const parts = [];
   parts.push("지금은 문구 작성 단계입니다. 아래 판단 노트의 내용으로 거절이유 문구를 작성하십시오.");
   parts.push("");
+  if (state.anchors.length > 0) {
+    parts.push("## 앵커 사례 (문장 골격·관용표현은 최우선으로 여기서 가져올 것)");
+    state.anchors.forEach((anchor) => {
+      parts.push(`[앵커 id ${anchor.corpus_id}] 닮은 이유: ${anchor.why}`);
+      parts.push(`가져올 구절: ${anchor.borrow.join(" / ")}`);
+      parts.push(anchor.record.body);
+      parts.push("");
+    });
+  }
   parts.push("## 판단 노트 (사안 고유 내용은 반드시 여기서만 가져올 것)");
   parts.push(JSON.stringify(a, null, 2));
   parts.push("");
@@ -337,10 +445,18 @@ function buildReviewFlags(validationFlags) {
 async function runDraft() {
   if (!state.analysis) return;
   el("oaDraftBtn").disabled = true;
-  setStatus("2단계 — 문구 생성 중...");
   // 열린 질문이 남아 있으면 기본값 자동 채택 기록 [SPEC §7-3]
   state.autoDefaults = (state.analysis.open_questions || []).map((q) => `"${q.question}" → 기본값 "${q.default}" 채택`);
   try {
+    // 앵커 선택: 코퍼스가 등록돼 있으면 후보 검색 → LLM이 닮은 사례 2~3건 선택 [SPEC §7-4]
+    state.anchors = [];
+    const corpus = await loadCorpus();
+    if (corpus.length >= 10) {
+      setStatus("앵커 사례 선택 중...");
+      const candidates = retrieveCandidates(corpus, state.analysis, 10);
+      state.anchors = await selectAnchors(candidates);
+    }
+    setStatus("2단계 — 문구 생성 중..." + (state.anchors.length ? ` (앵커: ${state.anchors.map((a) => "#" + a.corpus_id).join(", ")})` : ""));
     let raw = await chat({
       messages: [
         { role: "system", content: COMMON_SYSTEM },
@@ -365,6 +481,23 @@ async function runDraft() {
     }
 
     const { output, flags } = validateDraft(text);
+
+    // 코퍼스 충실성 검사 [SPEC §6-1] — 차단이 아니라 검토 필요 피드백
+    if (corpus.length >= 10) {
+      const report = fidelityReport(output, state.analysis, el("oaGoods").value, buildCorpusNgrams(corpus));
+      if (report.ratio > 0.15) {
+        flags.unshift({ severity: "필수확인", text: `코퍼스 이탈 표현 다수 (미매칭 비율 ${Math.round(report.ratio * 100)}%) — 전면 검토 요망.` });
+      }
+      report.unmatched.forEach((phrase) => {
+        flags.push({ severity: "확인", text: `코퍼스 미확인 표현: "${phrase.slice(0, 80)}" — 사례에 대응 구절이 없습니다.` });
+      });
+      if (state.anchors.length > 0) {
+        flags.push({ severity: "확인", text: `앵커 사례: ${state.anchors.map((a) => `#${a.corpus_id} (${a.why.slice(0, 40)})`).join(" / ")}` });
+      }
+    } else {
+      flags.push({ severity: "확인", text: "코퍼스 미등록 — 템플릿 골격만으로 생성했습니다. 코퍼스를 등록하면 실제 사례 대조가 활성화됩니다." });
+    }
+
     state.finalText = output;
     state.flags = buildReviewFlags(flags);
 
@@ -425,6 +558,8 @@ export function initOa33({ getContext, addGeneratedGround, prefill }) {
     el("oaEvidenceCoexist").classList.toggle("hidden", !el("oaEvidenceCoexistChk").checked);
   });
   el("oaFillBtn").addEventListener("click", prefill);
+  el("oaCorpusBtn").addEventListener("click", () => void importCorpus());
+  void refreshCorpusStatus();
 }
 
 // 승인 1 확정본으로 표장·지정상품 자동 채움 (notice.js 가 호출)
