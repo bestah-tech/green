@@ -7,7 +7,7 @@
 // ※ 34조 계열은 코퍼스 전무 — 이 생성기는 33조 1항 전용. [SPEC §9]
 
 import { callJson, chat } from "../shared/llm.js";
-import { loadSettings } from "../shared/settings.js";
+import { loadSettings, loadCorrections } from "../shared/settings.js";
 import { getAll, put, remove } from "../shared/db.js";
 import {
   TEMPLATES, PHRASEBANK, QUALITY_VOCAB,
@@ -457,9 +457,13 @@ async function runDraft() {
       state.anchors = await selectAnchors(candidates);
     }
     setStatus("2단계 — 문구 생성 중..." + (state.anchors.length ? ` (앵커: ${state.anchors.map((a) => "#" + a.corpus_id).join(", ")})` : ""));
+    // 심사관 저장 교정지시를 작성 단계 시스템 프롬프트에 포함 [설계 원칙 7]
+    const corrections = await loadCorrections();
+    const draftSystem = COMMON_SYSTEM +
+      (corrections.oa33_draft ? `\n\n심사관 교정지시 (반드시 준수)\n${corrections.oa33_draft}` : "");
     let raw = await chat({
       messages: [
-        { role: "system", content: COMMON_SYSTEM },
+        { role: "system", content: draftSystem },
         { role: "user", content: buildDraftPrompt() }
       ],
       temperature: 0.3
@@ -470,7 +474,7 @@ async function runDraft() {
     if (FORBIDDEN_PATTERNS.some((pattern) => pattern.test(text))) {
       raw = await chat({
         messages: [
-          { role: "system", content: COMMON_SYSTEM },
+          { role: "system", content: draftSystem },
           { role: "user", content: buildDraftPrompt() },
           { role: "assistant", content: text },
           { role: "user", content: "판례 번호·법리 서술이 포함되었다. 해당 표현을 모두 제거하고 문구 전문만 다시 출력하라." }

@@ -39,6 +39,29 @@
     </section>
 
     <section class="panel">
+      <h2>LLM 교정지시</h2>
+      <p class="panel-help">모델이 반복해서 놓치는 판단·형식을 단계별로 저장해 두면, 그 단계의 모든 LLM 호출에 자동으로 포함됩니다. (예: "영문 접두 문자 K는 Korea의 약어로 거래사회에서 흔히 사용되어 식별력이 없는 부분으로 검토하라")</p>
+      <div class="field">
+        <select id="corrKeySelect">
+          <option value="mark_structure">모듈1 — ① 표장 구성 분석</option>
+          <option value="foreign_meaning">모듈1 — ② 외국어 의미·칭호</option>
+          <option value="goods_normalize">모듈1 — ③ 지정상품 정리</option>
+          <option value="oa33_analyze">33조 생성기 — 1단계 심사 판단</option>
+          <option value="oa33_draft">33조 생성기 — 2단계 문구 작성</option>
+          <option value="oa33_anchor">33조 생성기 — 앵커 선택</option>
+          <option value="candidate_score">검색 에이전트 — 유사도 평가</option>
+        </select>
+      </div>
+      <div class="field">
+        <textarea id="corrText" rows="4" placeholder="이 단계에 항상 적용할 지시를 적으세요. 여러 지시는 줄바꿈으로 구분. (비우고 저장하면 삭제)"></textarea>
+      </div>
+      <div class="row">
+        <button id="corrSaveBtn" class="btn primary" type="button">교정지시 저장</button>
+        <span id="corrStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>출원건 관리</h2>
       <p class="panel-help">출원번호 기준으로 출원건을 만들고, 모든 산출물은 출원건 아래에 버전으로 쌓입니다. 데이터는 이 브라우저의 IndexedDB에만 저장됩니다.</p>
       <div class="row">

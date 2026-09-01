@@ -2,7 +2,7 @@
 // 모듈 1(출원상표 분석)은 2단계에서 이 파일에 이어 붙인다.
 
 import { STORAGE_KEYS } from "../shared/constants.js";
-import { loadSettings } from "../shared/settings.js";
+import { loadSettings, loadCorrections, saveCorrection } from "../shared/settings.js";
 import { fetchAvailableModels } from "../shared/llm.js";
 import { createCase, listCases, deleteCaseCascade } from "../shared/db.js";
 import { initAnalysis, refreshAnalysisCases } from "./analysis.js";
@@ -172,6 +172,22 @@ async function onDeleteCase(caseId) {
   }
 }
 
+// ---------- LLM 교정지시 관리 [설계 원칙 7] ----------
+
+async function loadCorrectionIntoForm() {
+  const corrections = await loadCorrections();
+  const key = el("corrKeySelect").value;
+  el("corrText").value = corrections[key] || "";
+  setStatus(el("corrStatus"), corrections[key] ? "저장된 교정지시가 있습니다." : "저장된 교정지시가 없습니다.");
+}
+
+async function onSaveCorrection() {
+  const key = el("corrKeySelect").value;
+  const text = el("corrText").value.trim();
+  await saveCorrection(key, text);
+  setStatus(el("corrStatus"), text ? "저장했습니다 — 이후 이 단계의 모든 호출에 포함됩니다." : "삭제했습니다.", "ok");
+}
+
 // ---------- 초기화 ----------
 
 async function initialize() {
@@ -187,6 +203,9 @@ async function initialize() {
 }
 
 el("testConnBtn").addEventListener("click", () => void testConnection());
+el("corrKeySelect").addEventListener("change", () => void loadCorrectionIntoForm());
+el("corrSaveBtn").addEventListener("click", () => void onSaveCorrection());
+void loadCorrectionIntoForm();
 el("createCaseBtn").addEventListener("click", () => void onCreateCase());
 el("newCaseId").addEventListener("keydown", (event) => {
   if (event.key === "Enter") void onCreateCase();
