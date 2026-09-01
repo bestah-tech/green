@@ -205,6 +205,54 @@ async function collectResults() {
   }
 }
 
+// ---------- ①-대안: 결과 텍스트 붙여넣기 수집 (IE 전용 검색시스템 대응) ----------
+
+// Ctrl+A 전체 복사본에서 출원번호가 나올 때마다 다음 출원번호 직전까지를 한 후보 블록으로 자른다.
+export function parsePastedResults(text) {
+  const APP_NO_G = /\b(4[0-5])[-\s]?(\d{4})[-\s]?(\d{7})\b/g;
+  const source = String(text || "");
+  const matches = [...source.matchAll(APP_NO_G)];
+  const items = [];
+  const seen = new Set();
+  matches.forEach((m, i) => {
+    if (items.length >= 200) return;
+    const end = i + 1 < matches.length ? matches[i + 1].index : Math.min(source.length, m.index + 600);
+    const raw = source.slice(m.index, end).replace(/\s+/g, " ").trim().slice(0, 500);
+    const appNo = `${m[1]}-${m[2]}-${m[3]}`;
+    const key = `${appNo}:${raw}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({
+      applicationNumber: appNo,
+      markName: "",
+      applicant: "",
+      status: "",
+      goodsClasses: (raw.match(/(?:상품분류|분류)\s*[:：]?\s*(\d{1,2}\s*류?(?:\s*,\s*\d{1,2}\s*류?)*)/) || [, ""])[1].trim(),
+      rawText: raw,
+      source: "paste"
+    });
+  });
+  return items;
+}
+
+function collectFromPaste() {
+  const text = el("pasteResultsText").value;
+  const status = el("collectStatus");
+  if (!text.trim()) {
+    setStatus(status, "붙여넣은 내용이 없습니다.", "error");
+    return;
+  }
+  state.collected = parsePastedResults(text);
+  renderCollected();
+  setStatus(
+    status,
+    state.collected.length > 0
+      ? `${state.collected.length}건 추출 (붙여넣기 방식). 후보로 저장할 항목을 체크하세요.`
+      : "출원번호(4X-YYYY-NNNNNNN) 패턴을 찾지 못했습니다. 검색결과 목록이 포함된 화면을 복사했는지 확인해 주세요.",
+    state.collected.length > 0 ? "ok" : "warn"
+  );
+}
+
 function renderCollected() {
   const list = el("collectedList");
   list.innerHTML = "";
@@ -525,6 +573,7 @@ async function initialize() {
     await renderCandidates();
   });
   el("collectBtn").addEventListener("click", () => void collectResults());
+  el("pasteResultsBtn").addEventListener("click", () => collectFromPaste());
   el("saveCandidatesBtn").addEventListener("click", () => void saveCheckedCandidates());
   el("captureBtn").addEventListener("click", () => void captureStructure());
   el("copyCaptureBtn").addEventListener("click", async () => {

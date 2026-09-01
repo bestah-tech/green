@@ -95,7 +95,7 @@
         markName: "",
         applicant: "",
         status: "",
-        goodsClasses: (raw.match(/(?:상품분류|분류)\s*[:：]?\s*([\d,\s류]+)/) || [, ""])[1].trim(),
+        goodsClasses: (raw.match(/(?:상품분류|분류)\s*[:：]?\s*(\d{1,2}\s*류?(?:\s*,\s*\d{1,2}\s*류?)*)/) || [, ""])[1].trim(),
         rawText: raw,
         source: "heuristic"
       });

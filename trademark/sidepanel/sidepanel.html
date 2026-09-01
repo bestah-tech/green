@@ -32,6 +32,11 @@
       <button id="collectBtn" class="btn primary" type="button">현재 화면 검색결과 수집</button>
       <span id="collectStatus" class="status"></span>
     </div>
+    <p class="help">검색시스템이 크롬에서 안 열리면(IE 전용): IE 검색결과 화면에서 Ctrl+A → Ctrl+C 로 전체 복사한 텍스트를 아래에 붙여넣고 추출하세요. 출원번호(4X-YYYY-NNNNNNN)를 기준으로 후보를 잘라냅니다.</p>
+    <textarea id="pasteResultsText" rows="5" placeholder="IE 검색결과 화면 전체 복사본 붙여넣기 (메뉴·버튼 텍스트가 섞여 있어도 됩니다)"></textarea>
+    <div class="row">
+      <button id="pasteResultsBtn" class="btn" type="button">붙여넣은 텍스트에서 후보 추출</button>
+    </div>
     <div id="collectedList" class="collected-list"></div>
     <div class="row hidden" id="saveRow">
       <button id="saveCandidatesBtn" class="btn" type="button">체크한 항목을 후보로 저장 (P번호 부여)</button>
