@@ -50,7 +50,7 @@ async function checkTab() {
     badge.textContent = matched ? "검색시스템 탭" : "탭 조건 미충족";
     badge.className = "tab-badge" + (matched ? " ok" : " error");
     el("collectBtn").disabled = !matched;
-    el("captureBtn").disabled = !matched;
+    // 구조 캡처는 어떤 페이지에서든 가능 (내부망 심사시스템 화면 파악용)
   } catch (error) {
     badge.textContent = "탭 확인 실패";
     badge.className = "tab-badge error";
@@ -346,10 +346,50 @@ async function renderCandidates() {
 
 // ---------- 화면 구조 캡처 (개발용) ----------
 
+// content script 가 없는 페이지(내부망 심사시스템 등)에 즉석 주입해 실행하는 캡처 함수.
+// chrome.scripting 으로 주입되므로 이 함수 안은 자기 완결적이어야 한다 (바깥 변수 참조 금지).
+function pageCaptureFn() {
+  const APP_NO_RE = /\b(4[0-5])[-\s]?(\d{4})[-\s]?(\d{7})\b/;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+  let sample = "";
+  let node;
+  while ((node = walker.nextNode())) {
+    if (APP_NO_RE.test(node.nodeValue || "")) {
+      let el = node.parentElement;
+      let depth = 0;
+      // 출원번호 주변의 의미 있는 컨테이너를 찾아 HTML 원문을 잘라낸다
+      while (el && depth < 6 && (el.outerHTML || "").length < 500) {
+        el = el.parentElement;
+        depth += 1;
+      }
+      if (el) sample = el.outerHTML.slice(0, 10000);
+      break;
+    }
+  }
+  if (!sample) sample = (document.body.innerHTML || "").slice(0, 10000);
+  return {
+    url: location.href,
+    title: document.title,
+    itemCount: 0,
+    sampleItemHtml: sample
+  };
+}
+
 async function captureStructure() {
   setStatus(el("captureStatus"), "캡처 중...");
   try {
-    const response = await sendToTab({ type: "TM_CAPTURE_STRUCTURE" });
+    let response;
+    try {
+      // KIPRIS 처럼 content script 가 있는 탭은 그대로 사용
+      response = await sendToTab({ type: "TM_CAPTURE_STRUCTURE" });
+    } catch {
+      // 그 외 페이지(내부망 심사시스템 등)는 캡처 함수를 즉석 주입
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: state.tabId },
+        func: pageCaptureFn
+      });
+      response = { ok: true, capture: result?.result };
+    }
     if (!response?.ok) throw new Error(response?.error || "캡처 실패");
     const out = el("captureOut");
     out.value = JSON.stringify(response.capture, null, 2);

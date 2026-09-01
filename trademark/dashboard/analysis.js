@@ -94,7 +94,12 @@ function markProgress(step, cls) {
 
 // ---------- 지정상품 입력 파싱 (코드 담당) ----------
 
-// "제25류: 티셔츠, 바지" / 줄바꿈 / 쉼표 혼용 입력을 [{ name, class|null }] 로 분해
+// "제25류: 티셔츠, 바지" / "03 화장품 G1201" / 코드만 있는 줄 등 내부 시스템 복사 형식을
+// [{ name, class|null, codes: [] }] 로 분해한다.
+// 유사군코드(G1201, S120907 등)는 상품명이 아니라 codes 로 분리하고,
+// 코드만 있는 줄은 직전 상품의 유사군코드로 붙인다.
+const SIMILAR_CODE_RE = /^[A-Z]{1,2}\d{4,6}$/;
+
 export function parseGoodsInput(text) {
   const items = [];
   String(text || "")
@@ -104,16 +109,35 @@ export function parseGoodsInput(text) {
     .forEach((line) => {
       let klass = null;
       let rest = line;
+      // "제25류:" 형식
       const classMatch = line.match(/제?\s*(\d{1,2})\s*류\s*[:：]?\s*/);
       if (classMatch) {
         klass = Number(classMatch[1]);
         rest = line.slice(classMatch.index + classMatch[0].length);
+      } else {
+        // "03 화장품 ..." 처럼 줄 맨 앞의 두 자리 숫자도 류로 인식
+        const leading = line.match(/^(\d{1,2})\s+/);
+        if (leading) {
+          klass = Number(leading[1]);
+          rest = line.slice(leading[0].length);
+        }
       }
       rest
-        .split(/[,，;；·]/)
-        .map((part) => part.trim().replace(/^[-•\d.)\s]+/, "").trim())
+        .split(/[,，;；·\t]/)
+        .map((part) => part.trim().replace(/^[-•.)\s]+/, "").trim())
         .filter(Boolean)
-        .forEach((name) => items.push({ name, class: klass }));
+        .forEach((part) => {
+          // 조각 안에서 유사군코드 토큰과 상품명 토큰 분리
+          const tokens = part.split(/\s+/);
+          const codes = tokens.filter((token) => SIMILAR_CODE_RE.test(token));
+          const name = tokens.filter((token) => !SIMILAR_CODE_RE.test(token)).join(" ").trim();
+          if (name) {
+            items.push({ name, class: klass, codes });
+          } else if (codes.length > 0 && items.length > 0) {
+            // 코드만 있는 조각·줄 → 직전 상품에 붙인다
+            items[items.length - 1].codes.push(...codes);
+          }
+        });
     });
   return items;
 }
@@ -227,12 +251,11 @@ async function runAnalysis() {
     markProgress(3, "running");
     if (goodsText) {
       const parsed = parseGoodsInput(goodsText);
-      let normalized = parsed;
-      const needLlm = parsed.some((item) => !item.class);
-      if (needLlm) {
-        // 류 미상 상품만 LLM 으로 정리 (긴 목록은 청크 분할 후 코드에서 병합)
-        normalized = [];
-        const chunks = state.settings.mockMode ? [parsed] : chunkArray(parsed, 40);
+      // 류가 비어 있는 항목만 LLM 으로 보완 (붙여넣기에 있던 류·코드는 건드리지 않는다)
+      const needClass = parsed.filter((item) => !item.class);
+      if (needClass.length > 0) {
+        const classByName = new Map();
+        const chunks = state.settings.mockMode ? [needClass] : chunkArray(needClass, 40);
         for (const chunk of chunks) {
           const step3 = await callJson({
             promptKey: GOODS_NORMALIZE.promptKey,
@@ -240,24 +263,28 @@ async function runAnalysis() {
             schema: GOODS_NORMALIZE.schema,
             userContent:
               "지정상품 목록 (JSON):\n" +
-              JSON.stringify(chunk, null, 2) +
-              "\n\nclass 가 null 인 항목만 류를 판단해 채워라. 이미 값이 있는 항목은 그대로 유지하라.",
+              JSON.stringify(chunk.map((item) => ({ name: item.name, class: null })), null, 2) +
+              "\n\n각 항목의 니스분류 류(class)를 판단해 채워라. 확실하지 않으면 \"unknown\" 으로 남겨라.",
             runNote
           });
           if (step3.ok) {
-            normalized.push(...step3.data.goods);
+            step3.data.goods.forEach((g) => classByName.set(g.name, g.class));
           } else {
             failures.push(`③ 지정상품 정리: ${step3.errors.join(" / ")}`);
-            normalized.push(...chunk.map((item) => ({ name: item.name, class: item.class ?? "unknown" })));
           }
         }
+        parsed.forEach((item) => {
+          if (!item.class && classByName.has(item.name)) item.class = classByName.get(item.name);
+        });
       }
-      // 유사군코드는 기준표 코드 매칭 (LLM 미사용)
+      // 유사군코드: 붙여넣기에 코드가 있으면 그대로 사용, 없으면 기준표 매칭 (LLM 미사용)
       const table = await loadSimilarGroupTable();
-      result.goods = normalized.map((item) => ({
+      result.goods = parsed.map((item) => ({
         name: item.name,
         class: item.class ?? "unknown",
-        similarGroupCode: matchSimilarGroupCode(table, item.name, item.class)
+        similarGroupCode: item.codes.length > 0
+          ? [...new Set(item.codes)].join(",")
+          : matchSimilarGroupCode(table, item.name, item.class)
       }));
       markProgress(3, failures.some((f) => f.startsWith("③")) ? "failed" : "done");
     } else {

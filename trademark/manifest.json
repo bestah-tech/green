@@ -24,6 +24,7 @@
     "storage",
     "sidePanel",
     "tabs",
+    "scripting",
     "unlimitedStorage"
   ],
   "host_permissions": [
