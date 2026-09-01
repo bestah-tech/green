@@ -188,3 +188,28 @@ body {
 .version-item:last-child { border-bottom: none; }
 .version-item .ver-tag { font-weight: 700; color: var(--primary); }
 .version-item .ver-date { font-size: 12px; color: var(--muted); }
+
+/* ---------- 모듈 5: 통지서 작성 ---------- */
+.mini-btn { font-size: 11px; padding: 3px 9px; }
+.mini-btn.danger { color: var(--error); }
+
+.ground-list { margin-top: 10px; font-size: 13px; }
+.ground-list.empty { color: var(--muted); font-size: 12px; }
+.ground-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 6px;
+}
+
+.draft-area {
+  width: 100%; margin-top: 10px; padding: 12px;
+  border: 1px solid var(--line); border-radius: 8px;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-size: 13px; line-height: 1.7; resize: vertical; background: #fff;
+}
+
+.asset-list { margin-top: 8px; }
+.asset-item { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; margin-bottom: 7px; }
+.asset-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+.asset-head .row { gap: 5px; }
+.asset-body { margin-top: 5px; font-size: 12px; line-height: 1.6; }
+.asset-usage { margin-top: 3px; font-size: 11px; color: var(--muted); }

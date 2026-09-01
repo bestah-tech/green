@@ -6,6 +6,7 @@ import { loadSettings } from "../shared/settings.js";
 import { fetchAvailableModels } from "../shared/llm.js";
 import { createCase, listCases, deleteCaseCascade } from "../shared/db.js";
 import { initAnalysis, refreshAnalysisCases } from "./analysis.js";
+import { initNotice, refreshNoticeCases } from "./notice.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -29,8 +30,9 @@ function switchView(view) {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.view === view);
   });
-  // 분석 화면으로 이동할 때 출원건 목록 최신화
+  // 화면 이동 시 출원건 목록 최신화
   if (view === "analysis") void refreshAnalysisCases();
+  if (view === "notice") void refreshNoticeCases();
 }
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -177,6 +179,7 @@ async function initialize() {
   renderSettingsSummary();
   await renderCaseTable();
   await initAnalysis();
+  await initNotice();
 
   // URL 해시로 초기 뷰 지정 가능 (#review, #notice 등 — 해당 모듈 구현 후 활성화)
   const hash = location.hash.replace("#", "");

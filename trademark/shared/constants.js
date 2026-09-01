@@ -54,11 +54,10 @@ export const MODULES = Object.freeze([
   {
     id: "notice",
     title: "통지서 작성",
-    description: "모듈 5 — 의견제출통지서·거절결정서 초안 작성과 HWPX 출력.",
+    description: "모듈 5 — 문구 자산 기반 의견제출통지서·거절결정서 초안 작성과 HWPX 출력.",
     launchType: "tab",
     path: "dashboard/dashboard.html#notice",
-    ready: false,
-    readyNote: "3단계(MVP)에서 최소판 구현 예정"
+    ready: true
   }
 ]);
 

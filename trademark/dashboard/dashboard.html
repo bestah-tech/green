@@ -17,7 +17,7 @@
       <button class="nav-btn" data-view="analysis" type="button">1. 출원상표 분석</button>
       <button class="nav-btn" data-view="query" type="button" disabled title="4단계에서 구현 예정">2. 검색식 작성</button>
       <button class="nav-btn" data-view="review" type="button" disabled title="6단계에서 구현 예정">4. 유사판단 리뷰</button>
-      <button class="nav-btn" data-view="notice" type="button" disabled title="3단계(MVP)에서 구현 예정">5. 통지서 작성</button>
+      <button class="nav-btn" data-view="notice" type="button">5. 통지서 작성</button>
     </nav>
     <div class="header-right">
       <span id="connBadge" class="conn-badge">연결 확인 전</span>
@@ -162,6 +162,65 @@
     <section class="panel">
       <h3>버전 이력 <span class="h-note">— 확정 후 수정하면 새 버전이 생기고 이전 버전은 보존됩니다</span></h3>
       <div id="anVersionList" class="version-list">아직 확정된 버전이 없습니다.</div>
+    </section>
+  </main>
+
+  <!-- 모듈 5 — 통지서 작성 (최소판: 문구 자산 + 초안 생성 + HWPX 출력) -->
+  <main id="view-notice" class="view hidden">
+    <section class="panel">
+      <h2>모듈 5 — 통지서 작성</h2>
+      <div class="row">
+        <label for="ntCaseSelect"><strong>출원건</strong></label>
+        <select id="ntCaseSelect"></select>
+        <select id="ntKindSelect">
+          <option value="opinion">의견제출통지서</option>
+          <option value="rejection">거절결정서</option>
+        </select>
+      </div>
+      <p id="ntCaseState" class="status"></p>
+    </section>
+
+    <section class="panel">
+      <h3>거절이유 구성 <span class="h-note">— 승인된 문구 자산만 선택할 수 있습니다 (근거 제한)</span></h3>
+      <div class="row">
+        <select id="ntArticleSelect"></select>
+        <select id="ntPhraseSelect"></select>
+        <button id="ntAddGroundBtn" class="btn" type="button">+ 거절이유 추가</button>
+      </div>
+      <div id="ntGroundList" class="ground-list"></div>
+    </section>
+
+    <section class="panel">
+      <h3>통지서 초안 <span class="h-note">— 조립은 코드가 하며(LLM 미사용), 생성 후 자유롭게 수정하세요</span></h3>
+      <div class="row">
+        <button id="ntGenerateBtn" class="btn primary" type="button">초안 생성</button>
+        <button id="ntSaveBtn" class="btn" type="button" disabled>버전 저장</button>
+        <button id="ntHwpxBtn" class="btn" type="button" disabled>HWPX 다운로드</button>
+        <span id="ntDraftStatus" class="status"></span>
+      </div>
+      <textarea id="ntDraftText" rows="20" class="draft-area hidden"></textarea>
+      <div id="ntVersionList" class="version-list"></div>
+    </section>
+
+    <section class="panel">
+      <h3>조문별 판단 문구 자산 <span class="h-note">— 문구마다 사용 상황과 승인 상태를 관리합니다</span></h3>
+      <div class="field">
+        <div class="row">
+          <select id="ntAssetArticle"></select>
+          <input id="ntAssetTitle" type="text" placeholder="문구 제목 (예: 기술적 표장 표준형)" autocomplete="off" />
+        </div>
+      </div>
+      <div class="field">
+        <textarea id="ntAssetText" rows="3" placeholder="판단 문구 본문"></textarea>
+      </div>
+      <div class="field">
+        <div class="row">
+          <input id="ntAssetUsage" type="text" placeholder="사용 상황 메모 (선택)" autocomplete="off" />
+          <button id="ntAssetAddBtn" class="btn" type="button">문구 등록</button>
+        </div>
+      </div>
+      <p id="ntAssetStatus" class="status"></p>
+      <div id="ntAssetList" class="asset-list"></div>
     </section>
   </main>
 
