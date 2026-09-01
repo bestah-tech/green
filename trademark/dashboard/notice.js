@@ -8,6 +8,12 @@
 import { get, put, getAll, remove, addVersion, getAllByCase, listCases } from "../shared/db.js";
 import { STORAGE_KEYS } from "../shared/constants.js";
 import { downloadHwpx } from "../shared/hwpx.js";
+import { initOa33, fillFromMarkVersion } from "./oa33.js";
+
+// 상용구 분류 이름 변경 매핑 — 원본 파일은 그대로 두고 도구 안에서만 이름을 바꾼다
+const CAT_RENAMES = {
+  "검토·결정 기재": "중간서류 문구"
+};
 
 const el = (id) => document.getElementById(id);
 
@@ -221,7 +227,8 @@ export function parsePhraseHtml(htmlText) {
     if (head.length < 3) return;
     const body = cleaned.slice(newline + 1).trim();
     if (!body) return;
-    entries.push({ tab: head[0], cat: head[1], title: head[2], body });
+    // rawCat: 재불러오기 시 같은 항목으로 인식하기 위한 원본 분류 (id 해시용)
+    entries.push({ tab: head[0], rawCat: head[1], cat: CAT_RENAMES[head[1]] || head[1], title: head[2], body });
   });
   return entries;
 }
@@ -239,7 +246,7 @@ async function importPhraseHtml() {
     let added = 0;
     let updated = 0;
     for (const entry of entries) {
-      const id = `imp_${simpleHash(`${entry.tab}|${entry.cat}|${entry.title}`)}`;
+      const id = `imp_${simpleHash(`${entry.tab}|${entry.rawCat}|${entry.title}`)}`;
       const existing = await get("phraseAssets", id);
       await put("phraseAssets", {
         id,
@@ -546,7 +553,21 @@ async function renderVersionList() {
 
 // ---------- 초기화 ----------
 
+// 이미 저장된 문구 자산의 분류 이름을 새 이름으로 이관 (재불러오기 없이도 반영)
+async function migrateCategoryRenames() {
+  const phrases = await getAll("phraseAssets");
+  for (const phrase of phrases) {
+    for (const [oldCat, newCat] of Object.entries(CAT_RENAMES)) {
+      const oldArticle = `점검표 / ${oldCat}`;
+      if (phrase.article === oldArticle) {
+        await put("phraseAssets", { ...phrase, article: `점검표 / ${newCat}` });
+      }
+    }
+  }
+}
+
 export async function initNotice() {
+  await migrateCategoryRenames();
   await seedPhrasesIfNeeded();
   await renderArticleSelects();
   await renderAssetList();
@@ -556,6 +577,20 @@ export async function initNotice() {
 
   el("ntImportBtn").addEventListener("click", () => void importPhraseHtml());
   el("ntAssetFilter").addEventListener("input", () => void renderAssetList());
+
+  // 33조 거절이유 문구 생성기 연결 [의통서 SPEC v2]
+  initOa33({
+    getContext: () => ({ caseId: state.caseId, markVersion: state.markVersion }),
+    addGeneratedGround: (article, phraseTitle, phraseText) => {
+      state.grounds.push({ article, phraseId: null, phraseTitle, phraseText });
+      renderGroundList();
+    },
+    prefill: () => {
+      if (!fillFromMarkVersion(state.markVersion)) {
+        setStatus(el("ntCaseState"), "승인 1이 확정된 출원건을 먼저 선택해 주세요.", "warn");
+      }
+    }
+  });
 
   el("ntCaseSelect").addEventListener("change", async () => {
     state.caseId = el("ntCaseSelect").value;

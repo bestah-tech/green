@@ -180,6 +180,43 @@
       <p id="ntCaseState" class="status"></p>
     </section>
 
+    <!-- 33조 거절이유 문구 생성기: 판단 → 작성 → 검토 파이프라인 [의통서 SPEC v2] -->
+    <section class="panel">
+      <h3>33조 거절이유 문구 생성 (AI) <span class="h-note">— 판단은 자유롭게, 문장은 템플릿·관용표현 안에서. 결과는 항상 [검토 필요]와 함께 나옵니다</span></h3>
+      <div class="field">
+        <div class="row">
+          <input id="oaMark" type="text" placeholder="표장 (예: 조와따)" autocomplete="off" />
+          <button id="oaFillBtn" class="btn" type="button">승인 1에서 채우기</button>
+        </div>
+      </div>
+      <div class="field">
+        <input id="oaGoods" type="text" placeholder="지정상품 요약 (비우면 '전부')" autocomplete="off" />
+      </div>
+      <div class="field">
+        <textarea id="oaMemo" rows="2" placeholder="심사관 메모 (구성 의미·관념·거절 방향 등 — 열린 질문의 답도 여기에 적고 1단계 재실행)"></textarea>
+      </div>
+      <div class="field">
+        <input id="oaGroundsHint" type="text" placeholder="조항 지정 (선택, 예: 3,7 — 비우면 LLM이 판단)" autocomplete="off" />
+      </div>
+      <div class="field field-inline">
+        <label><input id="oaEvidenceUseChk" type="checkbox" /> 사용실태 증거 확인됨 (유형 C 사실 주장에 필요)</label>
+        <textarea id="oaEvidenceUse" rows="2" class="hidden" placeholder="확인된 용례·출처 메모"></textarea>
+      </div>
+      <div class="field field-inline">
+        <label><input id="oaEvidenceCoexistChk" type="checkbox" /> 선등록 다수공존 확인됨 (유형 D에 필요)</label>
+        <textarea id="oaEvidenceCoexist" rows="2" class="hidden" placeholder="확인된 선등록상표 메모"></textarea>
+      </div>
+      <div class="row">
+        <button id="oaAnalyzeBtn" class="btn primary" type="button">1단계 — 심사 판단 실행</button>
+        <button id="oaDraftBtn" class="btn primary" type="button" disabled>2단계 — 문구 생성</button>
+        <button id="oaInsertBtn" class="btn" type="button" disabled>거절이유로 추가</button>
+      </div>
+      <p id="oaStatus" class="status"></p>
+      <pre id="oaNote" class="oa-note hidden"></pre>
+      <textarea id="oaDraftOut" rows="9" class="draft-area hidden"></textarea>
+      <div id="oaFlags" class="oa-flags hidden"></div>
+    </section>
+
     <section class="panel">
       <h3>거절이유 구성 <span class="h-note">— 승인된 문구 자산만 선택할 수 있습니다 (근거 제한)</span></h3>
       <div class="row">
