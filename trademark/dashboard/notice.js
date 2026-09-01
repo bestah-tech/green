@@ -95,12 +95,22 @@ async function listPhrases() {
 
 async function renderAssetList() {
   const container = el("ntAssetList");
-  const phrases = await listPhrases();
+  const query = el("ntAssetFilter").value.trim().toLowerCase();
+  let phrases = await listPhrases();
+  if (query) {
+    phrases = phrases.filter((p) =>
+      `${p.article} ${p.title} ${p.text}`.toLowerCase().includes(query)
+    );
+  }
   container.innerHTML = "";
   if (phrases.length === 0) {
-    container.textContent = "등록된 문구가 없습니다.";
+    container.textContent = query ? "검색 결과가 없습니다." : "등록된 문구가 없습니다.";
     return;
   }
+  const countLine = document.createElement("p");
+  countLine.className = "panel-help";
+  countLine.textContent = `문구 ${phrases.length}개`;
+  container.appendChild(countLine);
   phrases.forEach((phrase) => {
     const item = document.createElement("div");
     item.className = "asset-item";
@@ -179,22 +189,106 @@ async function addAsset() {
   el("ntAssetText").value = "";
   el("ntAssetUsage").value = "";
   setStatus(el("ntAssetStatus"), "문구를 등록했습니다 (승인 상태로 저장).", "ok");
+  await renderArticleSelects();
   await renderAssetList();
   await renderPhraseSelect();
 }
 
+// ---------- 상용구 HTML 불러오기 ----------
+// 형식: <textarea id="db"> 안에 "@@ 탭 | 분류 | 제목" + 본문 이 반복되는 특허넷 스타일 상용구 모음
+
+// 항목 식별용 간단 해시 (같은 탭·분류·제목이면 재불러오기 시 갱신)
+function simpleHash(text) {
+  let hash = 5381;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) + hash + text.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+export function parsePhraseHtml(htmlText) {
+  const doc = new DOMParser().parseFromString(htmlText, "text/html");
+  const db = doc.getElementById("db");
+  if (!db) throw new Error('이 파일에서 상용구 데이터(id="db")를 찾지 못했습니다. 상용구 모음 HTML이 맞는지 확인해 주세요.');
+  const raw = (db.value ?? db.textContent ?? "").replace(/\r\n/g, "\n");
+  const entries = [];
+  raw.split(/\n@@ ?/).forEach((part) => {
+    const cleaned = part.replace(/^@@ ?/, "").trim();
+    if (!cleaned) return;
+    const newline = cleaned.indexOf("\n");
+    if (newline < 0) return;
+    const head = cleaned.slice(0, newline).split("|").map((s) => s.trim());
+    if (head.length < 3) return;
+    const body = cleaned.slice(newline + 1).trim();
+    if (!body) return;
+    entries.push({ tab: head[0], cat: head[1], title: head[2], body });
+  });
+  return entries;
+}
+
+async function importPhraseHtml() {
+  const file = el("ntImportFile").files?.[0];
+  if (!file) {
+    setStatus(el("ntImportStatus"), "상용구 HTML 파일을 먼저 선택해 주세요.", "error");
+    return;
+  }
+  try {
+    const text = await file.text();
+    const entries = parsePhraseHtml(text);
+    if (entries.length === 0) throw new Error("불러올 문구가 없습니다.");
+    let added = 0;
+    let updated = 0;
+    for (const entry of entries) {
+      const id = `imp_${simpleHash(`${entry.tab}|${entry.cat}|${entry.title}`)}`;
+      const existing = await get("phraseAssets", id);
+      await put("phraseAssets", {
+        id,
+        article: `${entry.tab} / ${entry.cat}`, // 분류를 그대로 보존
+        title: entry.title,
+        text: entry.body,
+        usage: entry.tab === "점검표" ? "점검표 기재용" : "통지서 본문용",
+        approved: true, // 심사관 본인이 작성한 상용구 — 등록 즉시 채택
+        source: "상용구 가져오기",
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      if (existing) updated += 1; else added += 1;
+    }
+    setStatus(el("ntImportStatus"), `완료: 새 문구 ${added}개 등록, ${updated}개 갱신 (총 ${entries.length}개).`, "ok");
+    await renderArticleSelects();
+    await renderAssetList();
+    await renderPhraseSelect();
+  } catch (error) {
+    setStatus(el("ntImportStatus"), `불러오기 실패: ${error.message}`, "error");
+  }
+}
+
 // ---------- 거절이유 구성 ----------
 
-function renderArticleSelects() {
-  [el("ntArticleSelect"), el("ntAssetArticle")].forEach((select) => {
-    select.innerHTML = "";
-    ARTICLES.forEach((article) => {
-      const option = document.createElement("option");
-      option.value = article;
-      option.textContent = article;
-      select.appendChild(option);
-    });
+async function renderArticleSelects() {
+  // 등록 폼은 기본 조문 목록 고정
+  const assetSelect = el("ntAssetArticle");
+  assetSelect.innerHTML = "";
+  ARTICLES.forEach((article) => {
+    const option = document.createElement("option");
+    option.value = article;
+    option.textContent = article;
+    assetSelect.appendChild(option);
   });
+
+  // 거절이유 구성용 분류 목록: 기본 조문 + 자산에 존재하는 모든 분류 (불러온 상용구 포함)
+  const select = el("ntArticleSelect");
+  const current = select.value;
+  const phrases = await listPhrases();
+  const categories = [...new Set([...ARTICLES, ...phrases.map((p) => p.article)])];
+  select.innerHTML = "";
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    select.appendChild(option);
+  });
+  if (categories.includes(current)) select.value = current;
 }
 
 async function renderPhraseSelect() {
@@ -351,8 +445,17 @@ function buildDraft() {
   lines.push("");
   lines.push("- 아    래 -");
   lines.push("");
-  state.grounds.forEach((ground, index) => {
-    lines.push(`[거절이유 ${index + 1}] ${ground.article}`);
+  let groundNo = 0;
+  let refNo = 0;
+  state.grounds.forEach((ground) => {
+    // 조문이 있는 분류는 거절이유로, 점검표성 문구는 참고 기재로 구분
+    if (/\d+\s*조/.test(ground.article)) {
+      groundNo += 1;
+      lines.push(`[거절이유 ${groundNo}] ${ground.article}`);
+    } else {
+      refNo += 1;
+      lines.push(`[참고 기재 ${refNo}] ${ground.article} — ${ground.phraseTitle}`);
+    }
     lines.push(ground.phraseText);
     lines.push("");
   });
@@ -444,12 +547,15 @@ async function renderVersionList() {
 // ---------- 초기화 ----------
 
 export async function initNotice() {
-  renderArticleSelects();
   await seedPhrasesIfNeeded();
+  await renderArticleSelects();
   await renderAssetList();
   await renderPhraseSelect();
   renderGroundList();
   await refreshNoticeCases();
+
+  el("ntImportBtn").addEventListener("click", () => void importPhraseHtml());
+  el("ntAssetFilter").addEventListener("input", () => void renderAssetList());
 
   el("ntCaseSelect").addEventListener("change", async () => {
     state.caseId = el("ntCaseSelect").value;

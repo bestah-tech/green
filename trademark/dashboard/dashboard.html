@@ -203,7 +203,20 @@
     </section>
 
     <section class="panel">
+      <h3>상용구 HTML 불러오기 <span class="h-note">— 특허넷 스타일 상용구 모음(@@ 탭 | 분류 | 제목 형식)을 문구 자산으로 등록합니다</span></h3>
+      <div class="row">
+        <input id="ntImportFile" type="file" accept=".html,.htm,text/html" />
+        <button id="ntImportBtn" class="btn primary" type="button">불러오기</button>
+        <span id="ntImportStatus" class="status"></span>
+      </div>
+      <p class="panel-help">같은 파일을 다시 불러오면 내용이 갱신됩니다(중복 등록 없음). 본인이 작성한 상용구이므로 등록 즉시 승인 상태가 됩니다.</p>
+    </section>
+
+    <section class="panel">
       <h3>조문별 판단 문구 자산 <span class="h-note">— 문구마다 사용 상황과 승인 상태를 관리합니다</span></h3>
+      <div class="field">
+        <input id="ntAssetFilter" type="text" placeholder="문구 검색 (분류·제목·본문)" autocomplete="off" />
+      </div>
       <div class="field">
         <div class="row">
           <select id="ntAssetArticle"></select>
