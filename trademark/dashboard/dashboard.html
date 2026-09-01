@@ -15,7 +15,7 @@
     <nav class="module-nav">
       <button class="nav-btn active" data-view="home" type="button">홈</button>
       <button class="nav-btn" data-view="analysis" type="button">1. 출원상표 분석</button>
-      <button class="nav-btn" data-view="query" type="button" disabled title="4단계에서 구현 예정">2. 검색식 작성</button>
+      <button class="nav-btn" data-view="query" type="button">2. 검색식 작성</button>
       <button class="nav-btn" data-view="review" type="button" disabled title="6단계에서 구현 예정">4. 유사판단 리뷰</button>
       <button class="nav-btn" data-view="notice" type="button">5. 통지서 작성</button>
     </nav>
@@ -46,6 +46,8 @@
           <option value="mark_structure">모듈1 — ① 표장 구성 분석</option>
           <option value="foreign_meaning">모듈1 — ② 외국어 의미·칭호</option>
           <option value="goods_normalize">모듈1 — ③ 지정상품 정리</option>
+          <option value="query_terms">모듈2 — ① 검색 용어 추출</option>
+          <option value="query_expand">모듈2 — ② 칭호 변형·확장</option>
           <option value="oa33_analyze">33조 생성기 — 1단계 심사 판단</option>
           <option value="oa33_draft">33조 생성기 — 2단계 문구 작성</option>
           <option value="oa33_anchor">33조 생성기 — 앵커 선택</option>
@@ -196,6 +198,62 @@
     <section class="panel">
       <h3>버전 이력 <span class="h-note">— 확정 후 수정하면 새 버전이 생기고 이전 버전은 보존됩니다</span></h3>
       <div id="anVersionList" class="version-list">아직 확정된 버전이 없습니다.</div>
+    </section>
+  </main>
+
+  <!-- 모듈 2 — 검색식 작성 (K-QUERY 3레이어) -->
+  <main id="view-query" class="view hidden">
+    <section class="panel">
+      <h2>모듈 2 — 검색식 작성</h2>
+      <div class="row">
+        <label for="qCaseSelect"><strong>출원건</strong></label>
+        <select id="qCaseSelect"></select>
+        <span id="qApproveState" class="approve-chip">—</span>
+      </div>
+      <p class="panel-help">승인 1(출원상표 분석 확정)을 기준으로 ① 검색 용어 추출 → ② 칭호 변형·확장 → ③ 검색식 조립(코드) 순서로 진행합니다. 모든 결과는 직접 수정할 수 있고, [승인 2]를 누르면 그 시점의 검색 준비서가 버전으로 고정되어 검색 에이전트(모듈 3)에서 사용됩니다.</p>
+      <div class="row">
+        <button id="qTermsBtn" class="btn primary" type="button" disabled>① 검색 용어 추출 (LLM)</button>
+        <span id="qTermsStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="qTermsPanel">
+      <h3>① 검색 용어 <span class="h-note">— core: 반드시 검색할 핵심 용어 / support: 보조 용어</span></h3>
+      <table class="edit-table" id="qTermsTable">
+        <thead><tr><th>용어</th><th>구분</th><th>우선순위</th><th>선정 이유</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn add-row-btn q-add-row-btn" type="button" data-add="terms">+ 행 추가</button>
+      <div class="row">
+        <button id="qExpandBtn" class="btn primary" type="button" disabled>② 칭호 변형·확장 생성 (LLM)</button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="qVariationsPanel">
+      <h3>② 칭호 변형·확장 <span class="h-note">— 검색식에 넣을 변형만 체크하세요 (? 는 임의 문자열 와일드카드)</span></h3>
+      <table class="edit-table" id="qVariationsTable">
+        <thead><tr><th>사용</th><th>원 용어</th><th>변형</th><th>유형</th><th>변형 이유</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn add-row-btn q-add-row-btn" type="button" data-add="variations">+ 행 추가</button>
+      <div class="row">
+        <button id="qBuildBtn" class="btn primary" type="button" disabled>③ 검색식 조립·검증 (코드)</button>
+        <span id="qBuildStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="qQueriesPanel">
+      <h3>③ 검색식 <span class="h-note">— config/query_syntax.json 문법 기준으로 조립·검증 (내부망 반입 시 파일만 교체). 직접 수정 가능</span></h3>
+      <div id="qQueryList"></div>
+      <div class="row">
+        <button id="qApproveBtn" class="btn primary" type="button" disabled>승인 2 — 검색 준비서 확정</button>
+        <span id="qApproveStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>버전 이력 <span class="h-note">— 확정 후 수정하면 새 버전이 생기고 이전 버전은 보존됩니다</span></h3>
+      <div id="qVersionList" class="version-list">아직 확정된 버전이 없습니다.</div>
     </section>
   </main>
 

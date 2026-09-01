@@ -6,6 +6,7 @@ import { loadSettings, loadCorrections, saveCorrection } from "../shared/setting
 import { fetchAvailableModels } from "../shared/llm.js";
 import { createCase, listCases, deleteCaseCascade } from "../shared/db.js";
 import { initAnalysis, refreshAnalysisCases } from "./analysis.js";
+import { initQuery, refreshQueryCases } from "./query.js";
 import { initNotice, refreshNoticeCases } from "./notice.js";
 
 const el = (id) => document.getElementById(id);
@@ -32,6 +33,7 @@ function switchView(view) {
   });
   // 화면 이동 시 출원건 목록 최신화
   if (view === "analysis") void refreshAnalysisCases();
+  if (view === "query") void refreshQueryCases();
   if (view === "notice") void refreshNoticeCases();
 }
 
@@ -195,6 +197,7 @@ async function initialize() {
   renderSettingsSummary();
   await renderCaseTable();
   await initAnalysis();
+  await initQuery();
   await initNotice();
 
   // URL 해시로 초기 뷰 지정 가능 (#review, #notice 등 — 해당 모듈 구현 후 활성화)

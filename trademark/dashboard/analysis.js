@@ -622,7 +622,7 @@ export async function initAnalysis() {
   el("anRunBtn").addEventListener("click", () => void runAnalysis());
   el("anApproveBtn").addEventListener("click", () => void approveVersion());
   el("anMarkImage").addEventListener("change", onImageSelected);
-  document.querySelectorAll(".add-row-btn").forEach((btn) => {
+  document.querySelectorAll("#view-analysis .add-row-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const defKey = btn.dataset.add;
       const tbody = el(TABLE_DEFS[defKey].tbody).querySelector("tbody");

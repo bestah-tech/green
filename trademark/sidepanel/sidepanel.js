@@ -17,6 +17,7 @@ const state = {
   settings: null,
   caseId: "",
   markVersion: null,   // 승인 1 확정본
+  searchBrief: null,   // 승인 2 확정본 (검색 준비서)
   tabId: null,
   tabOk: false,
   collected: [],       // 수집됐지만 아직 저장 안 된 항목
@@ -87,8 +88,10 @@ async function refreshCases() {
 
 async function loadMarkVersion() {
   state.markVersion = null;
+  state.searchBrief = null;
   if (!state.caseId) {
     setStatus(el("spCaseState"), "출원건이 없습니다.");
+    await renderBriefQueries();
     return;
   }
   const caseRecord = await get("cases", state.caseId);
@@ -98,6 +101,71 @@ async function loadMarkVersion() {
   } else {
     setStatus(el("spCaseState"), "승인 1 미확정 — 수집·저장은 가능하지만 유사도 평가는 승인 1 이후에 가능합니다.", "warn");
   }
+  if (caseRecord?.approvedSearchBriefId) {
+    state.searchBrief = await get("searchBriefs", caseRecord.approvedSearchBriefId);
+  }
+  await renderBriefQueries();
+}
+
+// ---------- 승인 2 검색식 (모듈 2 확정본) ----------
+
+// 복사할 때마다 searchRuns 에 실행 기록을 남긴다 [데이터 모델: searchRuns]
+async function renderBriefQueries() {
+  const list = el("briefQueryList");
+  const queries = state.searchBrief?.data?.queries || [];
+  if (queries.length === 0) {
+    list.textContent = "승인 2가 확정되지 않았습니다. 대시보드의 [2. 검색식 작성]에서 확정하세요.";
+    return;
+  }
+  const runs = await getAllByCase("searchRuns", state.caseId);
+  const runCount = (query) => runs.filter((r) => r.query === query).length;
+
+  list.innerHTML = "";
+  queries.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "brief-query-item";
+    const head = document.createElement("div");
+    head.className = "bq-head";
+    const label = document.createElement("span");
+    label.className = "bq-label";
+    label.textContent = item.label;
+    const count = document.createElement("span");
+    count.className = "bq-count";
+    const n = runCount(item.query);
+    count.textContent = n > 0 ? `실행 ${n}회` : "미실행";
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "btn mini";
+    copyBtn.textContent = "복사";
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(item.query);
+        const runLabel = await nextId(state.caseId, "S");
+        await put("searchRuns", {
+          id: `${state.caseId}:${runLabel}`,
+          caseId: state.caseId,
+          label: runLabel,
+          searchBriefId: state.searchBrief.id,
+          query: item.query,
+          ranAt: new Date().toISOString()
+        });
+        copyBtn.textContent = "복사됨";
+        setTimeout(() => { copyBtn.textContent = "복사"; }, 1200);
+        await renderBriefQueries();
+      } catch (error) {
+        alert(`복사 실패: ${error.message}`);
+      }
+    });
+    head.appendChild(label);
+    head.appendChild(count);
+    head.appendChild(copyBtn);
+    const query = document.createElement("div");
+    query.className = "bq-query";
+    query.textContent = item.query;
+    div.appendChild(head);
+    div.appendChild(query);
+    list.appendChild(div);
+  });
 }
 
 // ---------- content script 통신 ----------
