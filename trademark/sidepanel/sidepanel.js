@@ -414,56 +414,98 @@ async function renderCandidates() {
 
 // ---------- 화면 구조 캡처 (개발용) ----------
 
-// content script 가 없는 페이지(내부망 심사시스템 등)에 즉석 주입해 실행하는 캡처 함수.
+// 아무 페이지에나 즉석 주입해 실행하는 캡처 함수. 특허넷(kiponet3)처럼 프레임으로 짜인
+// 화면에 대비해 모든 프레임에 주입하고, 프레임마다 (1) 출원번호 주변 HTML 표본과
+// (2) 검색식 입력창·버튼 후보(입력 요소 목록)를 수집한다.
 // chrome.scripting 으로 주입되므로 이 함수 안은 자기 완결적이어야 한다 (바깥 변수 참조 금지).
 function pageCaptureFn() {
   const APP_NO_RE = /\b(4[0-5])[-\s]?(\d{4})[-\s]?(\d{7})\b/;
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+
+  // 출원번호가 있는 첫 컨테이너의 HTML 표본
   let sample = "";
-  let node;
-  while ((node = walker.nextNode())) {
-    if (APP_NO_RE.test(node.nodeValue || "")) {
-      let el = node.parentElement;
-      let depth = 0;
-      // 출원번호 주변의 의미 있는 컨테이너를 찾아 HTML 원문을 잘라낸다
-      while (el && depth < 6 && (el.outerHTML || "").length < 500) {
-        el = el.parentElement;
-        depth += 1;
+  let found = false;
+  if (document.body) {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (APP_NO_RE.test(node.nodeValue || "")) {
+        found = true;
+        let el = node.parentElement;
+        let depth = 0;
+        // 출원번호 주변의 의미 있는 컨테이너를 찾아 HTML 원문을 잘라낸다
+        while (el && depth < 6 && (el.outerHTML || "").length < 500) {
+          el = el.parentElement;
+          depth += 1;
+        }
+        if (el) sample = el.outerHTML.slice(0, 8000);
+        break;
       }
-      if (el) sample = el.outerHTML.slice(0, 10000);
-      break;
     }
   }
-  if (!sample) sample = (document.body.innerHTML || "").slice(0, 10000);
+
+  // 검색식 입력창·실행 버튼 후보: 자동 입력·자동 실행용 셀렉터를 찾기 위한 요소 목록
+  const controls = [];
+  document.querySelectorAll("textarea, input, select, button, a[onclick]").forEach((node) => {
+    if (controls.length >= 60) return;
+    const tag = node.tagName.toLowerCase();
+    if (tag === "input" && ["hidden"].includes((node.type || "").toLowerCase())) return;
+    controls.push({
+      tag,
+      type: node.type || "",
+      id: node.id || "",
+      name: node.getAttribute("name") || "",
+      value: String(node.value || "").slice(0, 40),
+      text: (node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 40),
+      onclick: String(node.getAttribute("onclick") || "").slice(0, 80)
+    });
+  });
+
   return {
     url: location.href,
     title: document.title,
-    itemCount: 0,
-    sampleItemHtml: sample
+    found,
+    sampleItemHtml: sample,
+    controls,
+    bodySnippet: sample ? "" : (document.body?.innerHTML || "").slice(0, 6000)
   };
 }
 
 async function captureStructure() {
   setStatus(el("captureStatus"), "캡처 중...");
   try {
-    let response;
+    if (!state.tabId) throw new Error("탭을 찾을 수 없습니다.");
+    let frames;
     try {
-      // KIPRIS 처럼 content script 가 있는 탭은 그대로 사용
-      response = await sendToTab({ type: "TM_CAPTURE_STRUCTURE" });
-    } catch {
-      // 그 외 페이지(내부망 심사시스템 등)는 캡처 함수를 즉석 주입
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: state.tabId },
+      frames = await chrome.scripting.executeScript({
+        target: { tabId: state.tabId, allFrames: true },
         func: pageCaptureFn
       });
-      response = { ok: true, capture: result?.result };
+    } catch (error) {
+      throw new Error(`이 페이지는 캡처할 수 없습니다 (${error.message}). 일반 웹페이지에서 시도해 주세요.`);
     }
-    if (!response?.ok) throw new Error(response?.error || "캡처 실패");
+    const captures = (frames || []).map((f) => f?.result).filter(Boolean);
+    if (captures.length === 0) throw new Error("캡처된 프레임이 없습니다.");
+    const matched = captures.filter((c) => c.found);
+    // 출원번호가 있는 프레임 우선, 없으면 입력 요소가 많은 프레임 순 — 최대 3개
+    const ranked = (matched.length > 0 ? matched : captures)
+      .sort((a, b) => (b.controls?.length || 0) - (a.controls?.length || 0))
+      .slice(0, 3);
+    const capture = {
+      capturedAt: new Date().toISOString(),
+      pageUrl: captures[0]?.url || "",
+      frameCount: captures.length,
+      framesWithAppNo: matched.length,
+      frames: ranked
+    };
     const out = el("captureOut");
-    out.value = JSON.stringify(response.capture, null, 2);
+    out.value = JSON.stringify(capture, null, 2);
     out.classList.remove("hidden");
     el("copyCaptureBtn").classList.remove("hidden");
-    setStatus(el("captureStatus"), `캡처 완료 (감지된 항목 ${response.capture.itemCount}건). 내용을 복사해 전달해 주세요.`, "ok");
+    setStatus(
+      el("captureStatus"),
+      `캡처 완료 — 프레임 ${captures.length}개 중 출원번호 감지 ${matched.length}개. 내용을 복사해 전달해 주세요.`,
+      "ok"
+    );
   } catch (error) {
     setStatus(el("captureStatus"), error.message, "error");
   }
