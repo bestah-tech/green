@@ -59,6 +59,7 @@ class Result:
     chars: int = 0
     pages: int = 0
     warnings: list[str] = field(default_factory=list)
+    masked: dict[str, int] = field(default_factory=dict)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -133,6 +134,211 @@ def strip_repeated_headers(pages: list[str], threshold: float = 0.6) -> list[str
             tail -= 1
         out.append("\n".join(lines[head:tail]))
     return out
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 개인정보 마스킹 (--mask)
+#
+# 판결문·심결문의 당사자 실명·주소를 가린다. 같은 사람은 문서 안에서 같은
+# 번호를 받으므로("[성명1]") 누가 누구인지 관계는 유지된 채 신원만 가려진다.
+# 이름 사전이 아니라 문서 구조(당사자 표시줄, 직함, 주소 형태)로 판단한다.
+# 상표·서비스표 이름과 법원명·사건번호는 판례의 핵심이라 건드리지 않는다.
+# 법인명도 기본적으로 남긴다 (--mask-corp 로 함께 가릴 수 있음).
+# ──────────────────────────────────────────────────────────────────────────
+# ── 법인·단체를 나타내는 낱말. 이게 들어 있으면 개인 이름으로 보지 않는다 ──
+CORP_WORDS = (
+    "주식회사", "유한회사", "유한책임회사", "합자회사", "합명회사", "(주)", "㈜",
+    "법무법인", "특허법인", "법률사무소", "특허사무소", "변리사사무소", "회계법인",
+    "재단법인", "사단법인", "학교법인", "의료법인", "영농조합", "협동조합", "조합",
+    "공사", "공단", "진흥원", "연구원", "연구소", "협회", "학회", "센터", "재단",
+    "대학교", "대학", "병원", "은행", "그룹", "홀딩스", "코퍼레이션", "컴퍼니",
+    "Inc", "Ltd", "LLC", "Corp", "Co.", "GmbH", "S.A", "B.V", "N.V", "AG", "KG",
+)
+
+# ── 당사자 표시줄 라벨. 판결문은 "원 고", 심결문은 "청구인" 등으로 쓴다 ──
+PARTY_LABELS = (
+    "원고", "피고", "원고겸피고", "피고겸원고", "항소인", "피항소인",
+    "상고인", "피상고인", "청구인", "피청구인", "신청인", "피신청인",
+    "채권자", "채무자", "참가인", "보조참가인", "선정당사자", "당사자",
+    "출원인", "권리자", "심판청구인", "피심판청구인", "이의신청인",
+)
+# 라벨 안에 공백이 들어간 표기("원  고")까지 잡는다
+_LABEL_ALT = "|".join(r"\s*".join(lb) for lb in sorted(PARTY_LABELS, key=len, reverse=True))
+_PARTY_LINE = re.compile(
+    rf"^(?P<label>(?:{_LABEL_ALT}))"
+    r"(?P<paren>\s*\([^)]{0,20}\))?"       # "원고(반소피고)"
+    r"(?P<sep>[\s:\t]+)"
+    r"(?P<value>\S.*)$"
+)
+
+# ── 직함 뒤에 오는 사람 이름 ──
+ROLE_WORDS = (
+    "소송대리인", "담당변호사", "담당변리사", "변호사", "변리사", "법무담당관",
+    "대표이사", "대표자", "대표", "사내이사", "감사", "지배인",
+    "법정대리인", "특별대리인", "성년후견인", "파산관재인",
+    "재판장", "주심", "판사", "대법관", "심판장", "심판관", "심사관",
+)
+_ROLE = re.compile(
+    rf"(?P<role>{'|'.join(sorted(ROLE_WORDS, key=len, reverse=True))})"
+    r"(?P<sep>\s*)"
+    # 값 자리에 또 다른 직함이나 법인 표시가 오면 매치하지 않는다.
+    # 그래야 "재판장 판사 홍길동"에서 '판사 홍길동'이 다시 검사된다.
+    rf"(?!(?:{'|'.join(sorted(ROLE_WORDS, key=len, reverse=True))})\b)"
+    r"(?!(?:주식회사|유한회사|법무법인|특허법인|법률사무소|특허사무소|회계법인"
+    r"|재단법인|사단법인|학교법인|의료법인))"
+    r"(?P<value>[가-힣]{2,5}(?:\s*[,·]\s*[가-힣]{2,5})*)"
+)
+
+# ── 한국인 성(姓). 이름 판별의 1차 관문 ──
+_SURNAME_2 = ("남궁", "황보", "제갈", "사공", "선우", "서문", "독고", "동방", "망절")
+_SURNAME_1 = set(
+    "김이박최정강조윤장임한오서신권황안송류유홍전고문손양배백허남심노하곽성차주우구민진지엄"
+    "채원천방공현함변염여추도소석선설마길연위표명기반왕금옥육인맹제모탁국어은편용예봉학"
+)
+
+# ── 주소 ──
+_ADDR_START = re.compile(
+    r"(?:[가-힣]{2,8}(?:특별시|광역시|특별자치시|특별자치도)"
+    r"|(?:경기|강원|충청북|충청남|전라북|전라남|경상북|경상남|제주)도"
+    r"|(?:충북|충남|전북|전남|경북|경남)\b"
+    r"|[가-힣]{2,6}시(?![장민청])"          # 부천시 (시장·시민·시청은 제외)
+    r"|[가-힣]{2,6}군(?![인사])"
+    r"|[가-힣]{2,6}구(?![청역])"
+    r")"
+)
+_ADDR_HINT = re.compile(
+    r"(?:[가-힣A-Za-z0-9]+\s*(?:로|길)\s*\d+"       # 조마루로 212
+    r"|\d+\s*번지"
+    r"|\d+\s*동\s*\d+\s*호"                         # 1203동 1001호
+    r"|\d+\s*호\s*(?:\(|$)"
+    r"|아파트|빌딩|빌라|타워|오피스텔|상가)"
+)
+
+_RRN = re.compile(r"\b\d{6}\s*[-–]\s*\d{7}\b")
+_BIZNO = re.compile(r"\b\d{3}\s*-\s*\d{2}\s*-\s*\d{5}\b")
+_PHONE = re.compile(r"\b0\d{1,2}\s*[-)]\s*\d{3,4}\s*-\s*\d{4}\b")
+_EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
+_ACCOUNT = re.compile(r"\b\d{2,6}-\d{2,6}-\d{4,8}\b")
+
+
+# 성(姓)으로 시작하지만 사람 이름이 아닌 낱말들
+NOT_NAMES = set(ROLE_WORDS) | {
+    "원고", "피고", "본인", "상대방", "제3자", "성명", "주소", "주문", "이유",
+    "별지", "위와", "동일", "유사", "기각", "인용", "각하", "취소", "무효",
+    "상표", "표장", "상품", "서비스", "구성", "명칭", "도형", "문자",
+}
+
+
+def is_corp(value: str) -> bool:
+    return any(w in value for w in CORP_WORDS)
+
+
+def looks_like_person(value: str) -> bool:
+    """한국인 성명 형태인지. 성(姓)으로 시작하는 2~4자 한글 한 낱말만 인정한다."""
+    value = value.strip()
+    if is_corp(value):
+        return False
+    # "홍길동 (홍길동)" 처럼 괄호가 붙은 경우 앞부분만 본다
+    value = re.sub(r"\s*\(.*\)\s*$", "", value).strip()
+    if value in NOT_NAMES:
+        return False
+    if not re.fullmatch(r"[가-힣]{2,4}", value):
+        return False
+    return value[:2] in _SURNAME_2 or value[0] in _SURNAME_1
+
+
+class Masker:
+    """문서 하나를 처리하는 동안 같은 값에 같은 가명을 붙여준다."""
+
+    def __init__(self, mask_corp: bool = False):
+        self.mask_corp = mask_corp
+        self._names: dict[str, str] = {}
+        self._addrs: dict[str, str] = {}
+        self.counts: dict[str, int] = {}
+
+    def _bump(self, kind: str) -> None:
+        self.counts[kind] = self.counts.get(kind, 0) + 1
+
+    def name_token(self, value: str) -> str:
+        key = value.strip()
+        if key not in self._names:
+            self._names[key] = f"[성명{len(self._names) + 1}]"
+        self._bump("성명")
+        return self._names[key]
+
+    def addr_token(self, value: str) -> str:
+        key = re.sub(r"\s+", " ", value.strip())
+        if key not in self._addrs:
+            self._addrs[key] = f"[주소{len(self._addrs) + 1}]"
+        self._bump("주소")
+        return self._addrs[key]
+
+    # ── 줄 단위 처리 ────────────────────────────────────────────────
+    def _mask_party_line(self, line: str) -> str:
+        m = _PARTY_LINE.match(line)
+        if not m:
+            return line
+        value = m.group("value").strip()
+        if is_corp(value) and not self.mask_corp:
+            return line
+        if is_corp(value):
+            head = f"{m.group('label')}{m.group('paren') or ''}{m.group('sep')}"
+            self._bump("법인")
+            return head + "[법인]"
+        if not looks_like_person(value):
+            return line
+        head = f"{m.group('label')}{m.group('paren') or ''}{m.group('sep')}"
+        return head + self.name_token(value)
+
+    def _mask_roles(self, line: str) -> str:
+        def repl(m: re.Match) -> str:
+            names = re.split(r"\s*[,·]\s*", m.group("value"))
+            out = []
+            for nm in names:
+                out.append(self.name_token(nm) if looks_like_person(nm) else nm)
+            if all(o == n for o, n in zip(out, names)):
+                return m.group(0)        # 바뀐 게 없으면 원문 유지
+            return f"{m.group('role')}{m.group('sep')}" + ", ".join(out)
+
+        return _ROLE.sub(repl, line)
+
+    def _mask_address(self, line: str) -> str:
+        m = _ADDR_START.search(line)
+        if not m or not _ADDR_HINT.search(line[m.start():]):
+            return line
+        return line[:m.start()] + self.addr_token(line[m.start():])
+
+    def _mask_ids(self, line: str) -> str:
+        for pat, label, kind in (
+            (_RRN, "[주민번호]", "주민번호"),
+            (_BIZNO, "[사업자번호]", "사업자번호"),
+            (_PHONE, "[전화번호]", "전화번호"),
+            (_EMAIL, "[이메일]", "이메일"),
+            (_ACCOUNT, "[계좌번호]", "계좌번호"),
+        ):
+            line, n = pat.subn(label, line)
+            if n:
+                self.counts[kind] = self.counts.get(kind, 0) + n
+        return line
+
+    def run(self, text: str) -> str:
+        out = []
+        for line in text.split("\n"):
+            line = self._mask_ids(line)
+            masked = self._mask_party_line(line)
+            if masked != line:
+                out.append(masked)
+                continue
+            line = self._mask_address(line)
+            line = self._mask_roles(line)
+            out.append(line)
+        return "\n".join(out)
+
+
+def mask_pii(text: str, mask_corp: bool = False) -> tuple[str, dict[str, int]]:
+    """마스킹된 텍스트와 항목별 처리 건수를 돌려준다."""
+    m = Masker(mask_corp=mask_corp)
+    return m.run(text), m.counts
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -410,7 +616,8 @@ def extract_plain(path: Path, res: Result) -> str:
 # ──────────────────────────────────────────────────────────────────────────
 def convert_one(src: Path, in_root: Path, out_root: Path,
                 ocr: bool, keep_headers: bool, min_chars: int,
-                compact: bool = False) -> Result:
+                compact: bool = False, mask: bool = False,
+                mask_corp: bool = False) -> Result:
     res = Result(src=str(src.relative_to(in_root)), kind=src.suffix.lower().lstrip("."))
     try:
         res.src_bytes = src.stat().st_size
@@ -437,6 +644,9 @@ def convert_one(src: Path, in_root: Path, out_root: Path,
         res.status = "error"
         res.detail = f"{type(exc).__name__}: {exc}"
         return res
+
+    if mask:
+        text, res.masked = mask_pii(text, mask_corp=mask_corp)
 
     if compact:                      # 빈 줄 제거 — 토큰 수를 조금 더 줄인다
         text = re.sub(r"\n{2,}", "\n", text)
@@ -526,6 +736,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--merge", action="store_true", help="전체를 하나의 TXT로도 합치기")
     ap.add_argument("--chunk-mb", type=float, default=0,
                     help="--merge 시 N MB 단위로 분할 (0이면 한 파일)")
+    ap.add_argument("--mask", action="store_true",
+                    help="당사자 실명·주소·주민번호 등 개인정보를 가림 "
+                         "(상표명·법인명·사건번호는 그대로 둠)")
+    ap.add_argument("--mask-corp", action="store_true",
+                    help="--mask 와 함께, 당사자 법인명까지 [법인]으로 가림")
     ap.add_argument("--compact", action="store_true",
                     help="빈 줄까지 모두 제거해 용량을 더 줄임 (문단 구분은 사라짐)")
     ap.add_argument("--min-chars", type=int, default=50,
@@ -567,7 +782,8 @@ def main(argv: list[str] | None = None) -> int:
         with ProcessPoolExecutor(max_workers=args.workers) as pool:
             futs = {
                 pool.submit(convert_one, f, in_root, out_root,
-                            args.ocr, args.keep_headers, args.min_chars, args.compact): f
+                            args.ocr, args.keep_headers, args.min_chars,
+                            args.compact, args.mask, args.mask_corp): f
                 for f in files
             }
             for n, fut in enumerate(as_completed(futs), 1):
@@ -584,7 +800,7 @@ def main(argv: list[str] | None = None) -> int:
         for n, f in enumerate(files, 1):
             try:
                 r = convert_one(f, in_root, out_root, args.ocr, args.keep_headers,
-                                args.min_chars, args.compact)
+                                args.min_chars, args.compact, args.mask, args.mask_corp)
             except Exception as exc:
                 r = Result(src=str(f.relative_to(in_root)), kind=f.suffix.lower().lstrip("."),
                            status="error", detail=f"{type(exc).__name__}: {exc}")
@@ -597,11 +813,13 @@ def main(argv: list[str] | None = None) -> int:
     manifest = out_root / "_manifest.csv"
     with manifest.open("w", newline="", encoding="utf-8-sig") as fh:
         w = csv.writer(fh)
-        w.writerow(["원본", "결과", "형식", "상태", "비고", "원본bytes", "TXTbytes", "글자수", "페이지"])
+        w.writerow(["원본", "결과", "형식", "상태", "비고", "원본bytes", "TXTbytes",
+                    "글자수", "페이지", "마스킹"])
         for r in results:
             w.writerow([r.src, r.dst, r.kind, r.status,
                         "; ".join([r.detail] + r.warnings).strip("; "),
-                        r.src_bytes, r.out_bytes, r.chars, r.pages])
+                        r.src_bytes, r.out_bytes, r.chars, r.pages,
+                        " ".join(f"{k}{v}" for k, v in sorted(r.masked.items()))])
 
     merged_files: list[Path] = []
     if args.merge:
@@ -622,6 +840,13 @@ def main(argv: list[str] | None = None) -> int:
           f" ({(out_total / src_total * 100) if src_total else 0:.1f}%)")
     print(f"총 글자수: {sum(r.chars for r in results):,}자"
           f" (대략 {sum(r.chars for r in results) // 2:,} 토큰 내외)")
+    if args.mask:
+        total: dict[str, int] = {}
+        for r in results:
+            for k, v in r.masked.items():
+                total[k] = total.get(k, 0) + v
+        summary = ", ".join(f"{k} {v}건" for k, v in sorted(total.items())) or "해당 없음"
+        print(f"마스킹: {summary}")
     if merged_files:
         print("병합 파일: " + ", ".join(f"{p.name}({human(p.stat().st_size)})" for p in merged_files))
     print(f"결과표: {manifest}")
