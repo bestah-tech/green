@@ -1,0 +1,6 @@
+pymupdf>=1.24
+olefile>=0.47
+
+# --ocr 옵션 사용 시에만 필요 (별도로 tesseract-ocr, tesseract-ocr-kor 설치)
+# pytesseract>=0.3.10
+# pillow>=10.0
