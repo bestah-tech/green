@@ -4,11 +4,12 @@
   "operators": {
     "or": "+",
     "and": "&",
-    "wildcard": "?",
+    "wildcardMulti": "*",
+    "wildcardSingle": "?",
     "anchor": "/",
     "all": "#"
   },
-  "_operators_설명": "or(+): 어느 하나라도 포함. and(&): 그룹 동시 만족, 괄호와 함께 사용 (a+b)&(c+d). wildcard(?): 임의 문자 1자 (w?n). anchor(/): 칭호 경계 고정 — /CURO 는 CURO 로 시작, CURO/ 는 CURO 로 끝. all(#): 전체 대상.",
+  "_operators_설명": "or(+): 어느 하나라도 포함. and(&): 그룹 동시 만족, 괄호와 함께 (a+b)&(c+d). *: 다중문자 와일드카드. ?: 단일문자 와일드카드 (w?n). anchor(/): /단어=어두 한정, 단어/=어미 한정, /단어/=완전일치. all(#): 전체 대상. 글자 수 규칙: 3글자 이상 → / 생략, 1~2글자 → / 부착.",
   "params": {
     "_설명": "검색 화면이 실제로 받는 URL 파라미터 이름. 검색식(TmName)과 유사군코드 제한(ClassCd, + 로 연결)은 별개 파라미터다.",
     "markName": "TmName",

@@ -102,6 +102,60 @@ export function buildQueries(syntax, { terms = [], variations = [], similarGroup
   return queries;
 }
 
+// ---------- 정교 검색식(10종) 개수·기호 검증 [심사관 질의어 지침] ----------
+
+// 괄호 깊이를 고려해 최상위 레벨에서만 구분자로 분해 (괄호 안의 + 는 세지 않는다)
+function splitTopLevel(expr, sep) {
+  const parts = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of String(expr || "")) {
+    if (ch === "(") { depth += 1; cur += ch; }
+    else if (ch === ")") { depth -= 1; cur += ch; }
+    else if (ch === sep && depth === 0) { parts.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  parts.push(cur);
+  return parts.map((s) => s.trim()).filter(Boolean);
+}
+
+// no: 1~10. 반환 { valid, wordCount, issues } — 지침의 자체 검증 체크리스트를 코드로 강제.
+export function validateExpertExpression(no, query) {
+  const q = String(query || "").trim();
+  const issues = [];
+  if (!q) return { valid: false, wordCount: 0, issues: ["검색식이 비어 있습니다."] };
+
+  // 괄호 짝
+  let depth = 0;
+  for (const ch of q) { if (ch === "(") depth += 1; if (ch === ")") depth -= 1; if (depth < 0) break; }
+  if (depth !== 0) issues.push("괄호 짝이 맞지 않습니다.");
+
+  if (no >= 7 && no <= 9) {
+    // 교차식: (앞 10)&(뒤 10), 와일드카드 금지
+    if (/[*?]/.test(q)) issues.push("교차식(7~9)에는 와일드카드(*,?)를 쓸 수 없습니다.");
+    const groups = splitTopLevel(q, "&");
+    if (groups.length !== 2) {
+      issues.push(`(앞항)&(뒷항) 2개 그룹이어야 합니다 (현재 ${groups.length}개).`);
+    } else {
+      groups.forEach((g, i) => {
+        const inner = g.replace(/^\s*\(/, "").replace(/\)\s*$/, "");
+        const n = splitTopLevel(inner, "+").length;
+        if (n !== 10) issues.push(`${i === 0 ? "앞" : "뒷"}항 ${n}개 (10개 필요).`);
+      });
+    }
+    return { valid: issues.length === 0, wordCount: null, issues };
+  }
+
+  // 1~6, 10번: 정확히 20단어, + 전용
+  if (no === 10 && q.includes("&")) issues.push("10번(와일드카드 포괄식)에는 & 를 쓸 수 없습니다.");
+  if (no !== 10 && no >= 1 && no <= 6 && q.includes("&")) issues.push(`${no}번은 결합식(+)이라 & 를 쓰지 않습니다.`);
+  const words = splitTopLevel(q, "+");
+  if (words.length !== 20) issues.push(`단어 ${words.length}개 (정확히 20개 필요).`);
+  const dup = words.filter((w, i) => words.indexOf(w) !== i);
+  if (dup.length > 0) issues.push(`중복 단어: ${[...new Set(dup)].slice(0, 3).join(", ")}`);
+  return { valid: issues.length === 0, wordCount: words.length, issues };
+}
+
 // 검색 URL 조립 — 크롬에서 검색시스템이 열리면 이 URL 로 바로 검색 실행 가능.
 // kind: "similar"(유사질의어) | "query"(질의어) | "aiName"(AI 호칭)
 export function buildSearchUrl(syntax, { kind = "similar", tmName, classCd = "", applNo = "" } = {}) {

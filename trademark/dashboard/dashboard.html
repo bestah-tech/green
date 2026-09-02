@@ -46,8 +46,9 @@
           <option value="mark_structure">모듈1 — ① 표장 구성 분석</option>
           <option value="foreign_meaning">모듈1 — ② 외국어 의미·칭호</option>
           <option value="goods_normalize">모듈1 — ③ 지정상품 정리</option>
-          <option value="query_terms">모듈2 — ① 검색 용어 추출</option>
-          <option value="query_expand">모듈2 — ② 칭호 변형·확장</option>
+          <option value="query_expert">모듈2 — 정교 검색식 10종 생성</option>
+          <option value="query_terms">모듈2 — ① 검색 용어 추출 (간이)</option>
+          <option value="query_expand">모듈2 — ② 칭호 변형·확장 (간이)</option>
           <option value="oa33_analyze">33조 생성기 — 1단계 심사 판단</option>
           <option value="oa33_draft">33조 생성기 — 2단계 문구 작성</option>
           <option value="oa33_anchor">33조 생성기 — 앵커 선택</option>
@@ -210,9 +211,26 @@
         <select id="qCaseSelect"></select>
         <span id="qApproveState" class="approve-chip">—</span>
       </div>
-      <p class="panel-help">승인 1(출원상표 분석 확정)을 기준으로 ① 검색 용어 추출 → ② 칭호 변형·확장 → ③ 검색식 조립(코드) 순서로 진행합니다. 모든 결과는 직접 수정할 수 있고, [승인 2]를 누르면 그 시점의 검색 준비서가 버전으로 고정되어 검색 에이전트(모듈 3)에서 사용됩니다.</p>
+      <p class="panel-help">승인 1(출원상표 분석 확정)을 기준으로 검색식을 만듭니다. 아래 <strong>정교 검색식 10종 생성</strong>이 심사관 질의어 설계 지침을 그대로 적용한 기본 방식이고, 그 아래 ①②③(용어→변형→조립)은 간이 방식입니다. [승인 2]를 누르면 그 시점의 검색 준비서가 버전으로 고정되어 검색 에이전트(모듈 3)에서 사용됩니다.</p>
+    </section>
+
+    <section class="panel">
+      <h3>정교 검색식 10종 생성 <span class="h-note">— 질의어 설계 지침(발음·오타·로마자·자판·교차·와일드카드) 적용. 개수(20/10+10)·기호 규칙은 도구가 자동 검증합니다</span></h3>
+      <div class="field">
+        <label for="qExpertNote">이번 실행에만 적용할 요청사항 (선택)</label>
+        <input id="qExpertNote" type="text" placeholder="예: 관념 유사어도 함께 검토 / 특정 음절은 변형 제외" autocomplete="off" />
+      </div>
       <div class="row">
-        <button id="qTermsBtn" class="btn primary" type="button" disabled>① 검색 용어 추출 (LLM)</button>
+        <button id="qExpertBtn" class="btn primary" type="button" disabled>정교 검색식 10종 생성 (LLM)</button>
+        <span id="qExpertStatus" class="status"></span>
+      </div>
+      <div id="qExpertMeta" class="expert-meta hidden"></div>
+    </section>
+
+    <section class="panel">
+      <h3>간이 방식 <span class="h-note">— 용어·변형을 직접 다루고 싶을 때</span></h3>
+      <div class="row">
+        <button id="qTermsBtn" class="btn" type="button" disabled>① 검색 용어 추출 (LLM)</button>
         <span id="qTermsStatus" class="status"></span>
       </div>
     </section>

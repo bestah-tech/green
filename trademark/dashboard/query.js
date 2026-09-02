@@ -10,8 +10,9 @@ import { STORAGE_KEYS } from "../shared/constants.js";
 import { loadSettings } from "../shared/settings.js";
 import { callJson } from "../shared/llm.js";
 import { listCases, get, touchCase, addVersion, getAllByCase, setMockResponse, getMockResponse } from "../shared/db.js";
-import { loadQuerySyntax, buildQueries, validateQuery } from "../shared/query-builder.js";
+import { loadQuerySyntax, buildQueries, validateQuery, validateExpertExpression } from "../shared/query-builder.js";
 import { QUERY_TERMS, QUERY_EXPAND, QUERY_MOCK_SAMPLES } from "./query-prompts.js";
+import { QUERY_EXPERT, QUERY_EXPERT_MOCK } from "./query-expert-prompts.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -70,6 +71,7 @@ async function loadMarkVersion() {
     chip.textContent = "—";
     chip.className = "approve-chip";
     el("qTermsBtn").disabled = true;
+    el("qExpertBtn").disabled = true;
     return;
   }
   const caseRecord = await get("cases", state.caseId);
@@ -78,10 +80,12 @@ async function loadMarkVersion() {
     chip.textContent = `승인 1 확정 (v${state.markVersion?.seq ?? "?"}) — 검색식 작성 가능`;
     chip.className = "approve-chip done";
     el("qTermsBtn").disabled = false;
+    el("qExpertBtn").disabled = false;
   } else {
     chip.textContent = "승인 1 미확정 — 모듈 1에서 출원상표 분석을 먼저 확정하세요";
     chip.className = "approve-chip";
     el("qTermsBtn").disabled = true;
+    el("qExpertBtn").disabled = true;
   }
 }
 
@@ -283,6 +287,110 @@ function collectSimilarGroupCodes() {
   return [...new Set(codes)];
 }
 
+// ---------- 정교 검색식 10종 생성 (심사관 질의어 지침) ----------
+
+async function seedExpertMockIfNeeded() {
+  for (const [key, sample] of Object.entries(QUERY_EXPERT_MOCK)) {
+    const existing = await getMockResponse(key);
+    if (existing === null) await setMockResponse(key, sample);
+  }
+}
+
+// 승인 1 확정본에서 표장 표기·발음 정보를 뽑아 프롬프트 입력으로 만든다
+function markInputForExpert() {
+  const mark = state.markVersion?.data || {};
+  const texts = (mark.textElements || []).map((t) => ({ text: t.text, script: t.script, reading: t.reading }));
+  return JSON.stringify({
+    표기: texts,
+    요부: mark.dominantPart || null,
+    외국어의미: mark.foreignMeaning || []
+  }, null, 2);
+}
+
+async function runExpertGenerate() {
+  if (!state.markVersion) return;
+  const status = el("qExpertStatus");
+  el("qExpertBtn").disabled = true;
+  setStatus(status, "정교 검색식 10종 생성 중... (개수 규칙이 엄격해 시간이 걸릴 수 있습니다)");
+  try {
+    const settings = await loadSettings();
+    if (settings.mockMode) await seedExpertMockIfNeeded();
+    state.syntax = await loadQuerySyntax();
+
+    const runNote = el("qExpertNote").value.trim();
+    const result = await callJson({
+      promptKey: QUERY_EXPERT.promptKey,
+      role: QUERY_EXPERT.role,
+      schema: QUERY_EXPERT.schema,
+      userContent: "출원상표 (승인 1 확정본):\n" + markInputForExpert(),
+      runNote,
+      temperature: 0.4
+    });
+    if (!result.ok) throw new Error(result.errors.join(" / "));
+
+    const classCd = collectSimilarGroupCodes().join(state.syntax.operators?.or || "+");
+    const exprs = (result.data.expressions || [])
+      .slice()
+      .sort((a, b) => (a.no || 0) - (b.no || 0));
+    state.queries = exprs.map((e) => {
+      const check = validateExpertExpression(e.no, e.query);
+      return {
+        label: `${e.no}. ${e.title}${e.note ? " — " + e.note : ""}`,
+        query: e.query,
+        classCd,
+        purpose: "expert",
+        exprNo: e.no,
+        wordCount: check.wordCount,
+        valid: check.valid,
+        issues: check.issues
+      };
+    });
+    // 분석 요약(발음·분절·자판·추천)을 참고로 저장
+    state.expertMeta = {
+      markKor: result.data.markKor, markEng: result.data.markEng,
+      pronunciation: result.data.pronunciation, segmentation: result.data.segmentation,
+      dvorak: result.data.dvorak, similarQueryRecommend: result.data.similarQueryRecommend,
+      conceptSimilar: result.data.conceptSimilar
+    };
+    renderExpertMeta();
+    renderQueries();
+    el("qQueriesPanel").classList.remove("hidden");
+    el("qApproveBtn").disabled = state.queries.length === 0;
+    const invalid = state.queries.filter((q) => !q.valid).length;
+    setStatus(
+      status,
+      `검색식 ${state.queries.length}종 생성${invalid > 0 ? ` — ${invalid}종 개수·기호 규칙 위반(빨간 표시). 직접 고치거나 다시 생성하세요` : " — 규칙 모두 통과"}.`,
+      invalid > 0 ? "warn" : "ok"
+    );
+  } catch (error) {
+    setStatus(status, `생성 실패: ${error.message}`, "error");
+  } finally {
+    el("qExpertBtn").disabled = !state.markVersion;
+  }
+}
+
+function renderExpertMeta() {
+  const box = el("qExpertMeta");
+  const m = state.expertMeta;
+  if (!m) { box.classList.add("hidden"); return; }
+  const seg = m.segmentation || {};
+  const lines = [
+    m.pronunciation ? `발음: ${escapeHtmlQ(m.pronunciation)}` : "",
+    (seg.front || seg.back) ? `분절: 앞 <code>${escapeHtmlQ(seg.front || "")}</code>(${seg.frontLen ?? "?"}글자) · 뒤 <code>${escapeHtmlQ(seg.back || "")}</code>(${seg.backLen ?? "?"}글자)${seg.slashNote ? " — " + escapeHtmlQ(seg.slashNote) : ""}` : "",
+    m.dvorak ? `두벌식 자판: <code>${escapeHtmlQ(m.dvorak)}</code>` : "",
+    m.similarQueryRecommend ? `유사질의어 란 추천: <code>${escapeHtmlQ(m.similarQueryRecommend)}</code>` : "",
+    m.conceptSimilar ? `관념 유사(별건 검토): ${escapeHtmlQ(m.conceptSimilar)}` : ""
+  ].filter(Boolean);
+  box.innerHTML = lines.join("<br>");
+  box.classList.toggle("hidden", lines.length === 0);
+}
+
+function escapeHtmlQ(text) {
+  const div = document.createElement("div");
+  div.textContent = String(text ?? "");
+  return div.innerHTML;
+}
+
 async function runBuild() {
   const status = el("qBuildStatus");
   const terms = readTable("terms");
@@ -322,8 +430,14 @@ function renderQueries() {
     label.className = "query-label";
     label.textContent = item.label;
     const chip = document.createElement("span");
+    const chipText = (it) => {
+      if (!it.valid) return "검증 실패";
+      if (!it.exprNo) return "검증 통과";
+      if (it.exprNo >= 7 && it.exprNo <= 9) return "✓ 교차 10+10";
+      return `✓ ${it.wordCount ?? "?"}단어`;
+    };
     chip.className = "approve-chip" + (item.valid ? " done" : "");
-    chip.textContent = item.valid ? "검증 통과" : "검증 실패";
+    chip.textContent = chipText(item);
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "row-del-btn";
@@ -344,11 +458,15 @@ function renderQueries() {
     input.value = item.query;
     input.addEventListener("input", () => {
       item.query = input.value;
-      const check = validateQuery(state.syntax, item.query);
+      // 정교 검색식(exprNo)이면 개수·기호 규칙으로, 아니면 기본 문법 검증
+      const check = item.exprNo
+        ? validateExpertExpression(item.exprNo, item.query)
+        : validateQuery(state.syntax, item.query);
       item.valid = check.valid;
       item.issues = check.issues;
+      if ("wordCount" in check) item.wordCount = check.wordCount;
       chip.className = "approve-chip" + (item.valid ? " done" : "");
-      chip.textContent = item.valid ? "검증 통과" : "검증 실패";
+      chip.textContent = chipText(item);
       issues.textContent = item.issues.join(" ");
       issues.classList.toggle("hidden", item.issues.length === 0);
     });
@@ -381,8 +499,8 @@ async function approveBrief() {
   }
   const terms = readTable("terms");
   const queries = state.queries.filter((q) => q.query.trim());
-  if (terms.length === 0 || queries.length === 0) {
-    setStatus(status, "용어와 검색식이 최소 하나씩 있어야 확정할 수 있습니다.", "error");
+  if (queries.length === 0) {
+    setStatus(status, "검색식이 최소 하나는 있어야 확정할 수 있습니다.", "error");
     return;
   }
   const invalid = queries.filter((q) => !q.valid).length;
@@ -397,7 +515,8 @@ async function approveBrief() {
       terms,
       variations: readTable("variations"),
       similarGroupCodes: collectSimilarGroupCodes(),
-      queries: queries.map(({ label, query, classCd, purpose, valid }) => ({ label, query, classCd, purpose, valid })),
+      queries: queries.map(({ label, query, classCd, purpose, valid, exprNo }) => ({ label, query, classCd, purpose, valid, exprNo })),
+      expertMeta: state.expertMeta || null,
       syntaxSystem: state.syntax?.system || null
     };
     const version = await addVersion("searchBriefs", state.caseId, data, {
@@ -447,10 +566,13 @@ async function renderBriefVersions() {
       fillTable("terms", version.data.terms || []);
       fillTable("variations", version.data.variations || []);
       state.syntax = await loadQuerySyntax();
+      state.expertMeta = version.data.expertMeta || null;
       state.queries = (version.data.queries || []).map((q) => ({
         ...q,
-        ...validateQuery(state.syntax, q.query)
+        // 정교 검색식이면 개수·기호 규칙으로 재검증, 아니면 기본 문법 검증
+        ...(q.exprNo ? validateExpertExpression(q.exprNo, q.query) : validateQuery(state.syntax, q.query))
       }));
+      renderExpertMeta();
       renderQueries();
       ["qTermsPanel", "qVariationsPanel", "qQueriesPanel"].forEach((id) => el(id).classList.remove("hidden"));
       el("qExpandBtn").disabled = false;
@@ -470,6 +592,7 @@ async function renderBriefVersions() {
 
 export async function initQuery() {
   el("qCaseSelect").addEventListener("change", () => void onCaseChange());
+  el("qExpertBtn").addEventListener("click", () => void runExpertGenerate());
   el("qTermsBtn").addEventListener("click", () => void runTerms());
   el("qExpandBtn").addEventListener("click", () => void runExpand());
   el("qBuildBtn").addEventListener("click", () => void runBuild());
