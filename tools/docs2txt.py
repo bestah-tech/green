@@ -477,6 +477,13 @@ def human(n: int) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # 윈도우 명령 프롬프트(cp949)에서 출력 불가 문자로 죽는 것을 막는다
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except Exception:
+            pass
+
     ap = argparse.ArgumentParser(
         description="PDF/HWP/HWPX 판례 문서를 TXT로 일괄 변환",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -502,6 +509,12 @@ def main(argv: list[str] | None = None) -> int:
     out_root = Path(args.output).expanduser().resolve()
     if not in_root.is_dir():
         print(f"[!] 입력 폴더가 없습니다: {in_root}", file=sys.stderr)
+        print(f"    현재 위치: {Path.cwd()}", file=sys.stderr)
+        cand = Path.cwd()
+        n = sum(1 for p in cand.rglob("*") if p.suffix.lower() in SUPPORTED_EXT)
+        if n:
+            print(f"    힌트: 지금 있는 폴더 안에 변환 대상 {n}개가 보입니다. "
+                  f'-i "{cand}" 처럼 전체 경로를 적어보세요.', file=sys.stderr)
         return 2
     out_root.mkdir(parents=True, exist_ok=True)
 
@@ -518,7 +531,8 @@ def main(argv: list[str] | None = None) -> int:
     results: list[Result] = []
 
     def report(r: Result, n: int):
-        mark = {"ok": "✓", "empty": "△", "scanned": "△", "skipped": "-", "error": "✗"}[r.status]
+        mark = {"ok": "[OK]", "empty": "[??]", "scanned": "[SCAN]",
+                "skipped": "[--]", "error": "[FAIL]"}[r.status]
         extra = f"  {r.detail}" if r.detail else ""
         print(f"  {mark} [{n}/{len(files)}] {r.src} → {r.chars:,}자{extra}")
 
@@ -565,7 +579,7 @@ def main(argv: list[str] | None = None) -> int:
     ok = sum(r.status == "ok" for r in results)
     bad = [r for r in results if r.status in ("error", "empty", "scanned")]
 
-    print("\n" + "─" * 60)
+    print("\n" + "-" * 60)
     print(f"완료: {ok}/{len(results)}개 정상")
     print(f"용량: {human(src_total)} → {human(out_total)}"
           f" ({(out_total / src_total * 100) if src_total else 0:.1f}%)")
