@@ -77,6 +77,9 @@ _PAGENO = re.compile(
 
 def clean_text(text: str) -> str:
     """제어문자/중복공백 제거 + 유니코드 정규화. 한글은 NFC로 통일한다."""
+    # 짝이 깨진 서로게이트가 남아 있으면 UTF-8로 저장할 수 없으므로 먼저 걸러낸다
+    if any("\ud800" <= ch <= "\udfff" for ch in text):
+        text = text.encode("utf-8", "replace").decode("utf-8")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = _SOFT.sub("", text)
     text = _CTRL.sub("", text)
@@ -135,8 +138,18 @@ def strip_repeated_headers(pages: list[str], threshold: float = 0.6) -> list[str
 # ──────────────────────────────────────────────────────────────────────────
 # PDF
 # ──────────────────────────────────────────────────────────────────────────
+def _pymupdf():
+    """`import fitz`는 매번 deprecation 경고를 찍으므로 새 이름을 먼저 시도한다."""
+    try:
+        import pymupdf
+        return pymupdf
+    except ImportError:
+        import fitz
+        return fitz
+
+
 def extract_pdf(path: Path, res: Result, ocr: bool = False, keep_headers: bool = False) -> str:
-    import fitz  # PyMuPDF
+    fitz = _pymupdf()
 
     doc = fitz.open(path)
     if doc.needs_pass:
@@ -183,8 +196,7 @@ def _ocr_pdf(doc, res: Result) -> list[str]:
 
     import io
 
-    import fitz
-
+    fitz = _pymupdf()
     out = []
     zoom = fitz.Matrix(300 / 72, 300 / 72)
     for page in doc:
@@ -233,23 +245,38 @@ def iter_records(data: bytes):
 
 
 def decode_para_text(payload: bytes) -> str:
-    """PARA_TEXT 레코드(UTF-16LE + 컨트롤 문자)를 문자열로 푼다."""
+    """PARA_TEXT 레코드(UTF-16LE + 컨트롤 문자)를 문자열로 푼다.
+
+    일반 문자는 코드 단위를 그대로 모아 두었다가 UTF-16LE로 한 번에 디코딩한다.
+    확장 한자·이모지처럼 BMP 밖 문자는 서로게이트 '쌍'으로 저장되어 있어서,
+    한 칸씩 chr()로 바꾸면 짝이 깨져 UTF-8로 저장할 수 없는 문자열이 된다.
+    """
     out: list[str] = []
+    buf = bytearray()
+
+    def flush():
+        if buf:
+            out.append(buf.decode("utf-16-le", errors="replace"))
+            buf.clear()
+
     n = len(payload) // 2
     i = 0
     while i < n:
         (code,) = struct.unpack_from("<H", payload, i * 2)
         if code in _CHAR_CTRL:
+            flush()
             if code in (10, 13):
                 out.append("\n")
             i += 1
         elif code in _INLINE_CTRL or code in _EXTEND_CTRL:
+            flush()
             if code == 9:               # 탭
                 out.append("\t")
             i += 8                      # 컨트롤 + 파라미터 6 + 컨트롤 = 8 wchar
         else:
-            out.append(chr(code))
+            buf += payload[i * 2:i * 2 + 2]
             i += 1
+    flush()
     return "".join(out)
 
 
@@ -424,7 +451,7 @@ def convert_one(src: Path, in_root: Path, out_root: Path,
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     header = f"# 출처: {src.relative_to(in_root)}\n\n" if text else ""
-    dst.write_text(header + text + "\n", encoding="utf-8")
+    dst.write_text(header + text + "\n", encoding="utf-8", errors="replace")
     res.dst = str(rel)
     res.out_bytes = dst.stat().st_size
     return res
@@ -448,13 +475,13 @@ def merge_outputs(results: list[Result], out_root: Path, chunk_mb: float) -> lis
             return
         name = "merged.txt" if limit == 0 else f"merged_{idx:02d}.txt"
         p = out_root / name
-        p.write_text("".join(buf), encoding="utf-8")
+        p.write_text("".join(buf), encoding="utf-8", errors="replace")
         written.append(p)
         idx += 1
         buf, size = [], 0
 
     for r in usable:
-        body = (out_root / r.dst).read_text(encoding="utf-8")
+        body = (out_root / r.dst).read_text(encoding="utf-8", errors="replace")
         block = f"\n\n===== FILE: {r.src} =====\n\n{body}"
         blen = len(block.encode("utf-8"))
         if limit and size + blen > limit and buf:
@@ -544,13 +571,23 @@ def main(argv: list[str] | None = None) -> int:
                 for f in files
             }
             for n, fut in enumerate(as_completed(futs), 1):
-                r = fut.result()
+                try:
+                    r = fut.result()
+                except Exception as exc:      # 워커에서 죽어도 나머지는 계속 처리
+                    bad_file = futs[fut]
+                    r = Result(src=str(bad_file.relative_to(in_root)),
+                               kind=bad_file.suffix.lower().lstrip("."),
+                               status="error", detail=f"{type(exc).__name__}: {exc}")
                 results.append(r)
                 report(r, n)
     else:
         for n, f in enumerate(files, 1):
-            r = convert_one(f, in_root, out_root, args.ocr, args.keep_headers,
-                            args.min_chars, args.compact)
+            try:
+                r = convert_one(f, in_root, out_root, args.ocr, args.keep_headers,
+                                args.min_chars, args.compact)
+            except Exception as exc:
+                r = Result(src=str(f.relative_to(in_root)), kind=f.suffix.lower().lstrip("."),
+                           status="error", detail=f"{type(exc).__name__}: {exc}")
             results.append(r)
             report(r, n)
 
