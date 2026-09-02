@@ -50,7 +50,8 @@ async function checkTab() {
     state.tabOk = matched;
     badge.textContent = matched ? "검색시스템 탭" : "탭 조건 미충족";
     badge.className = "tab-badge" + (matched ? " ok" : " error");
-    el("collectBtn").disabled = !matched;
+    // 수집 버튼은 항상 활성: 검색결과가 다른 창(팝업)에 있어도 열린 탭 전체에서 찾아 읽는다
+    el("collectBtn").disabled = false;
     // 구조 캡처는 어떤 페이지에서든 가능 (내부망 심사시스템 화면 파악용)
   } catch (error) {
     badge.textContent = "탭 확인 실패";
@@ -206,10 +207,108 @@ async function sendToTab(message) {
 
 // ---------- ① 검색결과 수집 ----------
 
+// 내부망 상표검색시스템(kiponet3-ts)의 검색결과 페이지는 jqGrid 를 쓰며,
+// 결과 데이터 전체가 페이지 안에 window.applSrchList (출원상표DB) / applSrchListRef (참증DB)
+// 자바스크립트 배열로 박혀 있다. 화면을 긁는 대신 이 배열을 MAIN 월드에서 그대로 읽으면
+// 상표명(한/영)·출원인·유사군코드(similar_cd)·류·최종처분까지 정확히 얻는다.
+// chrome.scripting 으로 주입되므로 이 함수는 자기 완결적이어야 한다 (바깥 변수 참조 금지).
+function pageExtractResultArraysFn() {
+  function read(name) { try { return window[name]; } catch (e) { return null; } }
+  function norm(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(function (r) {
+      r = r || {};
+      return {
+        applno: String(r.applno || r.hidapplno || ""),
+        nm_kor_dis: String(r.nm_kor_dis || ""),
+        nm_eng_dis: String(r.nm_eng_dis || ""),
+        dsgn_clss_cd: String(r.dsgn_clss_cd || r.ref_clss || ""),
+        repaplt_nm: String(r.repaplt_nm || r.reprgtr_nm || ""),
+        appl_dt: String(r.appl_dt || ""),
+        lst_dspsl_desc: String(r.lst_dspsl_desc || ""),
+        similar_cd: String(r.similar_cd || r.hidsimilarcd || ""),
+        vien_figure_clss_cd: String(r.vien_figure_clss_cd || ""),
+        rgstno: String(r.rgstno || r.md_rgstno || ""),
+        imgLinkStr: String(r.imgLinkStr || "")
+      };
+    });
+  }
+  return {
+    url: location.href,
+    list: norm(read("applSrchList")),
+    ref: norm(read("applSrchListRef"))
+  };
+}
+
+// jqGrid 원본 레코드 → 후보(collected) 형태로 변환
+function mapResultRow(r, source) {
+  const appNo = String(r.applno || "").replace(/^(\d{2})(\d{4})(\d{7})$/, "$1-$2-$3");
+  const name = [r.nm_kor_dis, r.nm_eng_dis].filter(Boolean).join(" ").trim();
+  return {
+    applicationNumber: appNo || "unknown",
+    markName: name,
+    markNameKor: r.nm_kor_dis || "",
+    markNameEng: r.nm_eng_dis || "",
+    applicant: r.repaplt_nm || "",
+    status: r.lst_dspsl_desc || "",
+    goodsClasses: r.dsgn_clss_cd || "",
+    similarCd: r.similar_cd || "",
+    figureCode: r.vien_figure_clss_cd || "",
+    applDate: r.appl_dt || "",
+    registrationNumber: r.rgstno || "",
+    imageUrl: r.imgLinkStr || "",
+    rawText: [appNo, name, r.dsgn_clss_cd ? r.dsgn_clss_cd + "류" : "", r.repaplt_nm, r.similar_cd]
+      .filter(Boolean).join(" "),
+    source: source
+  };
+}
+
+// 검색결과가 담긴 탭을 찾는다: 현재 탭이 조건에 맞으면 그대로, 아니면 열려 있는 모든 탭에서 검색시스템 탭
+async function findResultTabId() {
+  const selectors = await loadSelectors();
+  const patterns = selectors.urlPatterns || [];
+  if (state.tabOk && state.tabId) return state.tabId;
+  const tabs = await chrome.tabs.query({});
+  const hit = tabs.find((t) => patterns.some((p) => String(t.url || "").includes(p)));
+  return hit?.id ?? null;
+}
+
 async function collectResults() {
   setStatus(el("collectStatus"), "수집 중...");
   el("collectBtn").disabled = true;
   try {
+    const tabId = await findResultTabId();
+
+    // 1순위: 검색결과 페이지의 jqGrid 데이터 배열을 MAIN 월드에서 직접 읽는다 (정확)
+    if (tabId) {
+      let frames = [];
+      try {
+        frames = await chrome.scripting.executeScript({
+          target: { tabId, allFrames: true },
+          world: "MAIN",
+          func: pageExtractResultArraysFn
+        });
+      } catch { /* 주입 불가 시 아래 셀렉터 폴백으로 */ }
+      const rows = [];
+      (frames || []).forEach((f) => {
+        const cap = f?.result;
+        if (!cap) return;
+        (cap.list || []).forEach((r) => rows.push(mapResultRow(r, "grid")));
+        (cap.ref || []).forEach((r) => rows.push(mapResultRow(r, "grid-ref")));
+      });
+      if (rows.length > 0) {
+        state.collected = rows;
+        renderCollected();
+        setStatus(
+          el("collectStatus"),
+          `${rows.length}건 수집 (검색결과 데이터 직접 읽기 — 유사군코드 포함). 후보로 저장할 항목을 체크하세요.`,
+          "ok"
+        );
+        return;
+      }
+    }
+
+    // 2순위: content script 셀렉터/휴리스틱 수집 (KIPRIS 등)
     const selectors = await loadSelectors();
     const response = await sendToTab({ type: "TM_COLLECT_RESULTS", selectors });
     if (!response?.ok) throw new Error(response?.error || "수집 실패");
@@ -220,13 +319,13 @@ async function collectResults() {
       el("collectStatus"),
       state.collected.length > 0
         ? `${state.collected.length}건 수집 (${mode} 방식). 후보로 저장할 항목을 체크하세요.`
-        : "수집된 결과가 없습니다. 검색결과가 화면에 보이는 상태인지 확인해 주세요.",
+        : "수집된 결과가 없습니다. 검색결과 창이 열려 있는지 확인해 주세요.",
       state.collected.length > 0 ? "ok" : "warn"
     );
   } catch (error) {
     setStatus(el("collectStatus"), error.message, "error");
   } finally {
-    el("collectBtn").disabled = !state.tabOk;
+    el("collectBtn").disabled = false;
   }
 }
 
@@ -295,7 +394,11 @@ function renderCollected() {
     head.textContent = [item.applicationNumber || "번호 미인식", item.markName].filter(Boolean).join(" · ");
     const raw = document.createElement("div");
     raw.className = "ci-raw";
-    raw.textContent = item.rawText;
+    // 구조화 수집이면 핵심 필드를, 아니면 원문을 보여준다
+    raw.textContent = item.source && item.source.startsWith("grid")
+      ? [item.goodsClasses ? item.goodsClasses + "류" : "", item.applicant, item.status,
+         item.similarCd ? "유사군 " + item.similarCd : ""].filter(Boolean).join(" · ")
+      : item.rawText;
     body.appendChild(head);
     body.appendChild(raw);
     label.appendChild(checkbox);
@@ -325,9 +428,16 @@ async function saveCheckedCandidates() {
       label,
       applicationNumber: item.applicationNumber || "unknown",
       markName: item.markName || "",
+      markNameKor: item.markNameKor || "",
+      markNameEng: item.markNameEng || "",
       applicant: item.applicant || "",
       status: item.status || "",
       goodsClasses: item.goodsClasses || "",
+      similarCd: item.similarCd || "",
+      figureCode: item.figureCode || "",
+      applDate: item.applDate || "",
+      registrationNumber: item.registrationNumber || "",
+      imageUrl: item.imageUrl || "",
       rawText: item.rawText,
       collectedFrom: item.source,
       collectedAt: new Date().toISOString(),
@@ -343,8 +453,36 @@ async function saveCheckedCandidates() {
 
 // ---------- ② 후보 목록 · 유사도 평가 ----------
 
-// 지정상품 비교(코드 담당): 승인 1 의 류 목록과 후보의 분류 텍스트에 겹치는 류가 있는지
+// 지정상품 비교(코드 담당) [지시서 모듈 3 — 유사군 대비는 코드]
+// 1순위: 유사군코드(similar_cd) 정밀 비교. 승인 1 지정상품의 유사군코드와 후보 유사군코드가
+//        같거나 한쪽이 다른 쪽의 상위(접두)면 겹침 (예: S1207 ⊃ S120602).
+// 2순위: 유사군코드가 없으면 니스분류 류(class) 겹침으로 근사.
+function tokenizeCodes(text) {
+  return (String(text || "").match(/[A-Z]\d{2,6}/gi) || []).map((c) => c.toUpperCase());
+}
+
 function compareGoodsClasses(markVersion, candidate) {
+  const myCodes = [...new Set(
+    (markVersion?.data?.goods || []).flatMap((g) => tokenizeCodes(g.similarGroupCode))
+  )];
+  const candCodes = [...new Set(tokenizeCodes(candidate.similarCd || candidate.hidsimilarcd))];
+
+  if (myCodes.length > 0 && candCodes.length > 0) {
+    // 접두 포함 관계까지 겹침으로 본다 (유사군코드는 계층 구조)
+    const overlap = [];
+    myCodes.forEach((a) => {
+      candCodes.forEach((b) => {
+        if (a === b || a.startsWith(b) || b.startsWith(a)) overlap.push(a === b ? a : `${a}~${b}`);
+      });
+    });
+    return {
+      result: overlap.length > 0 ? "겹침" : "안겹침",
+      by: "유사군코드",
+      overlap: [...new Set(overlap)]
+    };
+  }
+
+  // 폴백: 류(class) 비교
   const myClasses = new Set(
     (markVersion?.data?.goods || [])
       .map((g) => Number(g.class))
@@ -353,8 +491,8 @@ function compareGoodsClasses(markVersion, candidate) {
   const candClasses = String(candidate.goodsClasses || candidate.rawText || "")
     .match(/\d{1,2}/g) || [];
   const overlap = [...new Set(candClasses.map(Number))].filter((n) => myClasses.has(n));
-  if (myClasses.size === 0 || candClasses.length === 0) return { result: "unknown", overlap: [] };
-  return { result: overlap.length > 0 ? "겹침" : "안겹침", overlap };
+  if (myClasses.size === 0 || candClasses.length === 0) return { result: "unknown", by: "류", overlap: [] };
+  return { result: overlap.length > 0 ? "겹침" : "안겹침", by: "류", overlap };
 }
 
 async function scoreCandidate(candidate) {
@@ -466,8 +604,8 @@ async function renderCandidates() {
       });
       const goodsChip = document.createElement("span");
       goodsChip.className = "score-chip" + (candidate.goodsCheck?.result === "겹침" ? " high" : "");
-      goodsChip.textContent = `류 ${candidate.goodsCheck?.result || "unknown"}` +
-        (candidate.goodsCheck?.overlap?.length ? ` (${candidate.goodsCheck.overlap.join(",")})` : "");
+      goodsChip.textContent = `${candidate.goodsCheck?.by || "류"} ${candidate.goodsCheck?.result || "unknown"}` +
+        (candidate.goodsCheck?.overlap?.length ? ` (${candidate.goodsCheck.overlap.slice(0, 4).join(",")})` : "");
       scores.appendChild(goodsChip);
       item.appendChild(scores);
 

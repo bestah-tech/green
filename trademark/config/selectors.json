@@ -1,6 +1,7 @@
 {
-  "_설명": "상표검색시스템 검색결과 DOM 셀렉터. 화면 구조가 바뀌면 코드 수정 없이 이 파일만 교체한다. 현재는 KIPRIS 공개 사이트(kipris.or.kr) 기준 초안이며, 내부망 반입 시 내부망 검색시스템 구조로 교체 예정.",
-  "system": "kipris-public-draft",
+  "_설명": "상표검색시스템 검색결과 수집 설정. 내부망 상표검색(kiponet3-ts)의 검색결과 페이지는 jqGrid 를 쓰며, 결과 전체가 페이지 안에 window.applSrchList(출원상표DB)/applSrchListRef(참증DB) JS 배열로 존재한다. 수집은 이 배열을 MAIN 월드에서 직접 읽는 것을 1순위로 하고(정확·유사군코드 포함), 셀렉터/휴리스틱(KIPRIS 등)은 폴백이다.",
+  "system": "kiponet3-ts",
+  "_실측_필드": "applno(출원번호) nm_kor_dis/nm_eng_dis(상표명 한/영) dsgn_clss_cd(류) repaplt_nm(출원인) appl_dt(출원일) lst_dspsl_desc(최종처분) similar_cd(유사군코드) vien_figure_clss_cd(도형코드) imgLinkStr(이미지) rgstno(등록번호)",
   "urlPatterns": [
     "kipris.or.kr",
     "kpopds1.kipo.go.kr",
